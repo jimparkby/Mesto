@@ -19,3 +19,5 @@ android/app/release
 *.keystore
 *.jks
 *.tsbuildinfo
+
+.vercel
