@@ -55,6 +55,12 @@ npm run dev          # http://localhost:5173 — демо-режим
 
 ## Supabase
 
+Боевой проект: `sport-ryadom` (ref `tztrfetnjlvjebdrrydd`, eu-central-1). Схема, демо-данные (15 событий + 18 демо-участников),
+функции `telegram-auth` и `bot`, webhook бота и гостевой вход уже настроены. Демо-события раз в сутки
+переносятся на неделю вперёд (pg_cron `roll-demo-events`), так что лента не пустеет.
+
+Настройка с нуля:
+
 1. Создайте проект на supabase.com, включите **Anonymous sign-ins** (Authentication → Providers).
 2. Примените схему и демо-данные:
    ```bash
