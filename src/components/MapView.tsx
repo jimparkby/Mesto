@@ -13,6 +13,9 @@ interface GlMarker {
 }
 interface GlMap {
   on(ev: string, cb: (e: { lngLat: { lng: number; lat: number } }) => void): void;
+  getStyle(): { layers: { id: string; type: string; layout?: Record<string, unknown> }[] };
+  setLayoutProperty(layer: string, name: string, value: unknown): void;
+  setPaintProperty(layer: string, name: string, value: unknown): void;
   flyTo(opts: { center: [number, number]; zoom?: number }): void;
   remove(): void;
   resize(): void;
@@ -23,38 +26,83 @@ interface GlLib {
   Marker: new (opts?: Record<string, unknown>) => GlMarker;
 }
 
-/** Mapbox при наличии токена, иначе MapLibre + OpenStreetMap — карта работает и без ключей. */
-async function loadGl(): Promise<{ lib: GlLib; style: unknown; extra: Record<string, unknown> }> {
+function isDark(): boolean {
+  const scheme = document.documentElement.dataset.scheme; // выставляет Telegram-платформа
+  if (scheme) return scheme === 'dark';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+/**
+ * Фирменный вид карты «СпортРядом» поверх Mapbox Standard (без Mapbox Studio — всё в коде):
+ * парки и зелёные зоны подсвечены (там проходит большинство тренировок), лишние POI и транспорт
+ * приглушены, чтобы метки событий читались лучше.
+ * https://docs.mapbox.com/map-styles/standard/api/
+ */
+function mapboxBasemapConfig(dark: boolean): Record<string, unknown> {
+  return {
+    lightPreset: dark ? 'night' : 'day',
+    theme: 'faded',
+    showPointOfInterestLabels: true,
+    densityPointOfInterestLabels: 1,
+    showTransitLabels: false,
+    showPedestrianRoads: true,
+    show3dObjects: true,
+    showLandmarkIcons: true,
+    colorGreenspace: dark ? '#1f4d33' : '#b7ebc6',
+    colorWater: dark ? '#1b2f4a' : '#a5d4f5',
+    colorLand: dark ? '#141821' : '#f6f7f2',
+    colorMotorways: dark ? '#6b5a2e' : '#ffe08a',
+    colorTrunks: dark ? '#5a4e30' : '#ffeab0',
+    colorRoads: dark ? '#2a303b' : '#ffffff',
+    colorPlaceLabels: dark ? '#e5e7eb' : '#1f2937',
+    colorRoadLabels: dark ? '#9ca3af' : '#6b7280',
+    colorPointOfInterestLabels: dark ? '#86efac' : '#15803d',
+    colorModePointOfInterestLabels: 'single',
+  };
+}
+
+/** Mapbox при наличии токена, иначе MapLibre + бесплатные векторные тайлы OpenFreeMap — карта работает и без ключей. */
+/** OpenFreeMap: русские подписи и фирменные цвета парков/воды, как в стиле Mapbox. */
+function customizeOpenFreeMap(map: GlMap, dark: boolean) {
+  for (const layer of map.getStyle().layers) {
+    const text = layer.layout?.['text-field'];
+    if (layer.type === 'symbol' && text && JSON.stringify(text).includes('name')) {
+      map.setLayoutProperty(layer.id, 'text-field', ['coalesce', ['get', 'name:ru'], ['get', 'name']]);
+    }
+    if (layer.type !== 'fill') continue;
+    if (/park|wood|grass|landcover_wood|landuse_park/.test(layer.id)) {
+      map.setPaintProperty(layer.id, 'fill-color', dark ? '#1f4d33' : '#b7ebc6');
+    } else if (/^water/.test(layer.id)) {
+      map.setPaintProperty(layer.id, 'fill-color', dark ? '#1b2f4a' : '#a5d4f5');
+    }
+  }
+}
+
+async function loadGl(): Promise<{
+  lib: GlLib;
+  style: unknown;
+  extra: Record<string, unknown>;
+  onLoad?: (map: GlMap) => void;
+}> {
+  const dark = isDark();
   if (MAPBOX_TOKEN) {
     const [{ default: mapboxgl }] = await Promise.all([
       import('mapbox-gl'),
       import('mapbox-gl/dist/mapbox-gl.css'),
     ]);
     mapboxgl.accessToken = MAPBOX_TOKEN;
-    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     return {
       lib: mapboxgl as unknown as GlLib,
-      style: dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/streets-v12',
-      extra: { language: 'ru' },
+      style: 'mapbox://styles/mapbox/standard',
+      extra: { language: 'ru', config: { basemap: mapboxBasemapConfig(dark) }, pitch: 30 },
     };
   }
   const [maplibre] = await Promise.all([import('maplibre-gl'), import('maplibre-gl/dist/maplibre-gl.css')]);
   return {
     lib: ((maplibre as { default?: unknown }).default ?? maplibre) as GlLib,
-    style: {
-      version: 8,
-      sources: {
-        osm: {
-          type: 'raster',
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-          tileSize: 256,
-          attribution: '© OpenStreetMap contributors',
-          maxzoom: 19,
-        },
-      },
-      layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-    },
+    style: `https://tiles.openfreemap.org/styles/${dark ? 'dark' : 'liberty'}`,
     extra: {},
+    onLoad: (map) => customizeOpenFreeMap(map, dark),
   };
 }
 
@@ -86,7 +134,7 @@ export function MapView({ events = [], selectedId, onSelect, userLocation, pick,
     let disposed = false;
     const start = center ?? pick?.value ?? MINSK_CENTER;
     loadGl()
-      .then(({ lib, style, extra }) => {
+      .then(({ lib, style, extra, onLoad }) => {
         if (disposed || !containerRef.current) return;
         const map = new lib.Map({
           container: containerRef.current,
@@ -100,7 +148,14 @@ export function MapView({ events = [], selectedId, onSelect, userLocation, pick,
           if (handlersRef.current.onPick) handlersRef.current.onPick({ lat: e.lngLat.lat, lng: e.lngLat.lng });
           else handlersRef.current.onSelect?.(null);
         });
-        map.on('load', () => map.resize());
+        map.on('load', () => {
+          map.resize();
+          try {
+            onLoad?.(map);
+          } catch (err) {
+            console.warn('map customization failed', err);
+          }
+        });
         mapRef.current = { map, lib };
         setReady(true);
       })

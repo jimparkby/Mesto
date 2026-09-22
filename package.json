@@ -21,7 +21,7 @@
     "@capacitor/status-bar": "^8.0.3",
     "@supabase/supabase-js": "^2.117.0",
     "mapbox-gl": "^3.31.0",
-    "maplibre-gl": "^6.10.0",
+    "maplibre-gl": "^5.24.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4"
