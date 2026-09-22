@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">СпортРядом</string>
+    <string name="title_activity_main">СпортРядом</string>
+    <string name="package_name">by.sportryadom.app</string>
+    <string name="custom_url_scheme">by.sportryadom.app</string>
+</resources>

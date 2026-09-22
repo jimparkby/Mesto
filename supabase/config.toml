@@ -1,0 +1,12 @@
+project_id = "sport-ryadom"
+
+[auth]
+# Гостевой вход в браузере и в APK
+enable_anonymous_sign_ins = true
+
+# Вызываются без JWT пользователя: Telegram присылает webhook, а вход ещё не выполнен.
+[functions.bot]
+verify_jwt = false
+
+[functions.telegram-auth]
+verify_jwt = false
