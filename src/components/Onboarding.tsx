@@ -67,7 +67,7 @@ export function Onboarding({ onDone }: Props) {
         </h1>
         <p className="onb-launch-sub">Любительский спорт в Минске</p>
         <div className="onb-spacer" />
-        <button className="btn btn-galaxy" onClick={() => go(0)}>
+        <button className="btn btn-peach btn-arrow" onClick={() => go(0)}>
           Начать
         </button>
       </div>
@@ -111,7 +111,7 @@ export function Onboarding({ onDone }: Props) {
         ))}
       </div>
 
-      <button className="btn btn-primary" onClick={() => (last ? onDone() : go(slide + 1))}>
+      <button className="btn btn-peach btn-arrow" onClick={() => (last ? onDone() : go(slide + 1))}>
         {last ? 'Найти тренировку' : 'Далее'}
       </button>
       {!last ? (

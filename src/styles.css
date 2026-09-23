@@ -1,77 +1,91 @@
-/* ===== Тема: One UI 8.5 =====
-   Палитра и типографика из One UI Design Kit. От Telegram берём только светлую/тёмную схему
-   (data-scheme), вне Telegram — prefers-color-scheme. */
+/* ===== Тема =====
+   Палитра из макета СпортРядом (бордо #6C151E→#9E212E, персик #F5DABF→#C28585), структура One UI,
+   кнопки в духе Timon. От Telegram берём только светлую/тёмную схему (data-scheme),
+   вне Telegram — prefers-color-scheme. */
 :root {
-  --primary: #387aff;
-  --primary-press: #2b66e0;
-  --primary-soft: rgba(56, 122, 255, 0.12);
+  --burgundy: linear-gradient(160deg, #6c151e 0%, #9e212e 100%);
+  --peach: linear-gradient(90deg, #f5dabf 0%, #c28585 100%);
+
+  --primary: #9e212e; /* текст и иконки акцентного цвета */
+  --primary-press: #86202a;
+  --primary-fill: linear-gradient(135deg, #a8283a 0%, #6c151e 100%); /* заливка основных кнопок */
+  --primary-soft: rgba(158, 33, 46, 0.09);
   --on-primary: #ffffff;
-  --galaxy: linear-gradient(100deg, #4f8ff7 0%, #3aa9e0 45%, #1fc7a6 100%);
 
-  --bg: #f1f1f3; /* Background */
-  --surface: #ffffff; /* Container background */
-  --component: #ebebea; /* Component */
-  --elevated: #fcfcff; /* Foreground: шторки, диалоги */
-  --text: #111113;
-  --muted: #76767c;
-  --faint: #99999d; /* Secondary */
-  --border: rgba(0, 0, 0, 0.07);
-  --blur-bg: rgba(252, 252, 255, 0.62);
-  --scrim: rgba(0, 0, 0, 0.32);
+  --bg: #f6f1ef;
+  --surface: #ffffff;
+  --component: #f1e8e5;
+  --elevated: #fffcfa;
+  --text: #1e0f11;
+  --muted: #7a6a6c;
+  --faint: #a89c9d;
+  --border: rgba(108, 21, 30, 0.08);
+  --blur-bg: rgba(255, 252, 250, 0.7);
+  --scrim: rgba(30, 10, 12, 0.4);
 
-  --success: #1aa251;
-  --success-soft: rgba(26, 162, 81, 0.12);
-  --warn: #e57a00;
-  --warn-soft: rgba(229, 122, 0, 0.12);
-  --danger: #f0443a;
+  --success: #1f9d55;
+  --success-soft: rgba(31, 157, 85, 0.11);
+  --warn: #d9720b;
+  --warn-soft: rgba(217, 114, 11, 0.12);
+  --danger: #d93a30;
 
-  --radius: 26px;
-  --radius-sm: 18px;
+  --radius: 24px;
+  --radius-sm: 14px;
   --tabbar-h: 64px;
   --tabbar-gap: 12px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --shadow-float: 0 8px 28px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-float: 0 8px 28px rgba(108, 21, 30, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05);
   color-scheme: light;
 }
 
 :root[data-scheme='dark'] {
-  --bg: #000000;
-  --surface: #17171a;
-  --component: #2e2e30;
-  --elevated: #2e2e30;
-  --text: #fcfcff;
-  --muted: #8e8e93;
-  --faint: #848487;
-  --border: rgba(255, 255, 255, 0.08);
-  --blur-bg: rgba(23, 23, 26, 0.62);
-  --scrim: rgba(0, 0, 0, 0.55);
-  --primary-soft: rgba(56, 122, 255, 0.2);
-  --success: #34c46b;
-  --success-soft: rgba(52, 196, 107, 0.16);
-  --warn: #ff9f2e;
-  --warn-soft: rgba(255, 159, 46, 0.16);
+  --bg: #140a0c;
+  --surface: #221114;
+  --component: #33191d;
+  --elevated: #2a1418;
+  --text: #fbf3ee;
+  --muted: #b39c9a;
+  --faint: #8c7572;
+  --border: rgba(245, 218, 191, 0.1);
+  --blur-bg: rgba(34, 17, 20, 0.66);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --primary: #f5dabf;
+  --primary-press: #e8c3a6;
+  --primary-fill: var(--peach);
+  --primary-soft: rgba(245, 218, 191, 0.13);
+  --on-primary: #6c151e;
+  --success: #5fd08a;
+  --success-soft: rgba(95, 208, 138, 0.14);
+  --warn: #ffb35c;
+  --warn-soft: rgba(255, 179, 92, 0.14);
+  --danger: #ff7a70;
   --shadow-float: 0 8px 28px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-scheme]) {
-    --bg: #000000;
-    --surface: #17171a;
-    --component: #2e2e30;
-    --elevated: #2e2e30;
-    --text: #fcfcff;
-    --muted: #8e8e93;
-    --faint: #848487;
-    --border: rgba(255, 255, 255, 0.08);
-    --blur-bg: rgba(23, 23, 26, 0.62);
-    --scrim: rgba(0, 0, 0, 0.55);
-    --primary-soft: rgba(56, 122, 255, 0.2);
-    --success: #34c46b;
-    --success-soft: rgba(52, 196, 107, 0.16);
-    --warn: #ff9f2e;
-    --warn-soft: rgba(255, 159, 46, 0.16);
+    --bg: #140a0c;
+    --surface: #221114;
+    --component: #33191d;
+    --elevated: #2a1418;
+    --text: #fbf3ee;
+    --muted: #b39c9a;
+    --faint: #8c7572;
+    --border: rgba(245, 218, 191, 0.1);
+    --blur-bg: rgba(34, 17, 20, 0.66);
+    --scrim: rgba(0, 0, 0, 0.6);
+    --primary: #f5dabf;
+    --primary-press: #e8c3a6;
+    --primary-fill: var(--peach);
+    --primary-soft: rgba(245, 218, 191, 0.13);
+    --on-primary: #6c151e;
+    --success: #5fd08a;
+    --success-soft: rgba(95, 208, 138, 0.14);
+    --warn: #ffb35c;
+    --warn-soft: rgba(255, 179, 92, 0.14);
+    --danger: #ff7a70;
     --shadow-float: 0 8px 28px rgba(0, 0, 0, 0.5);
     color-scheme: dark;
   }
@@ -88,7 +102,6 @@ body {
   background: var(--bg);
   color: var(--text);
   font: 15px/1.45 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
 }
@@ -161,10 +174,9 @@ p {
   color: var(--muted);
 }
 .big-title {
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  line-height: 36px;
 }
 .big-header .big-extra {
   margin-top: 8px;
@@ -297,8 +309,8 @@ p {
   width: 34px;
   height: 34px;
   place-items: center;
-  border-radius: 50%;
-  background: var(--primary);
+  border-radius: 11px;
+  background: var(--primary-fill);
   color: var(--on-primary);
 }
 .tab-create.is-active {
@@ -481,16 +493,17 @@ p {
 
 /* ===== Кнопки и поля ===== */
 .btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 48px;
-  padding: 0 22px;
-  border-radius: 999px;
-  border: none;
-  font-weight: 600;
-  font-size: 15px;
+  min-height: 54px;
+  padding: 0 24px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid transparent;
+  font-weight: 700;
+  font-size: 16px;
   transition: opacity 0.15s, transform 0.1s, background 0.15s;
 }
 .btn:active:not(:disabled) {
@@ -501,15 +514,49 @@ p {
   cursor: default;
 }
 .btn-primary {
-  background: var(--primary);
+  background: var(--primary-fill);
   color: var(--on-primary);
+  box-shadow: 0 6px 18px rgba(108, 21, 30, 0.22);
 }
 .btn-primary:active:not(:disabled) {
-  background: var(--primary-press);
+  filter: brightness(0.94);
 }
+/* Контурная кнопка, как вторичная в Timon */
 .btn-ghost {
-  background: var(--component);
-  color: var(--text);
+  background: transparent;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+/* Шеврон справа у основных действий */
+.btn-arrow {
+  padding-left: 48px;
+  padding-right: 48px;
+}
+.btn-arrow::after {
+  content: '';
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+/* Маленькая контурная «Изменить ✎» */
+.btn-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--primary);
+  background: none;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
 }
 .btn-tonal {
   background: var(--primary-soft);
@@ -523,13 +570,13 @@ p {
   flex: 1;
 }
 .btn-round {
-  width: 48px;
+  width: 54px;
   padding: 0;
   flex: none;
 }
 .btn-sm {
-  min-height: 36px;
-  padding: 0 16px;
+  min-height: 40px;
+  padding: 0 20px;
   font-size: 14px;
 }
 .link {
@@ -625,7 +672,6 @@ select.input {
 }
 .search-box .input {
   padding-left: 46px;
-  border-radius: 999px;
 }
 .search-box .input::-webkit-search-cancel-button {
   display: none;
@@ -637,7 +683,7 @@ select.input {
   height: 50px;
   display: grid;
   place-items: center;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   border: none;
   background: var(--surface);
   color: var(--text);
@@ -648,13 +694,13 @@ select.input {
 }
 .dot {
   position: absolute;
-  top: -2px;
-  right: -2px;
+  top: -4px;
+  right: -4px;
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
   border-radius: 9px;
-  background: var(--primary);
+  background: var(--primary-fill);
   color: var(--on-primary);
   font-size: 11px;
   font-weight: 700;
@@ -681,8 +727,8 @@ select.input {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 16px;
-  border-radius: 999px;
+  padding: 9px 14px;
+  border-radius: 12px;
   border: none;
   background: var(--surface);
   font-size: 14px;
@@ -697,7 +743,7 @@ select.input {
 .chip.is-on,
 .sheet .chip.is-on,
 .card .chip.is-on {
-  background: var(--primary);
+  background: var(--primary-fill);
   color: var(--on-primary);
 }
 .list-toolbar {
@@ -711,14 +757,14 @@ select.input {
 .segmented {
   display: inline-flex;
   padding: 3px;
-  border-radius: 999px;
+  border-radius: 14px;
   background: var(--surface);
 }
 .segmented button {
   border: none;
   background: none;
   padding: 7px 12px;
-  border-radius: 999px;
+  border-radius: 11px;
   font-size: 13px;
   white-space: nowrap;
   font-weight: 600;
@@ -726,7 +772,7 @@ select.input {
   transition: background 0.15s, color 0.15s;
 }
 .segmented button.is-on {
-  background: var(--primary);
+  background: var(--primary-fill);
   color: var(--on-primary);
 }
 .segmented.full {
@@ -774,7 +820,7 @@ select.input {
   border-color: var(--primary);
 }
 .switch:checked::after {
-  background: #fff;
+  background: var(--on-primary);
   transform: translateX(20px);
 }
 
@@ -849,8 +895,8 @@ select.input {
 .toast {
   max-width: 480px;
   padding: 12px 20px;
-  border-radius: 999px;
-  background: rgba(40, 40, 44, 0.92);
+  border-radius: 14px;
+  background: rgba(40, 22, 25, 0.94);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   color: #fff;
@@ -903,7 +949,7 @@ select.input {
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   background: #fff;
-  border: 3px solid var(--pin, var(--primary));
+  border: 3px solid var(--pin, #9e212e);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
   font-size: 18px;
 }
@@ -921,9 +967,9 @@ select.input {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--primary);
+  background: #9e212e;
   border: 3px solid #fff;
-  box-shadow: 0 0 0 7px rgba(56, 122, 255, 0.25);
+  box-shadow: 0 0 0 7px rgba(158, 33, 46, 0.22);
 }
 
 .app.is-fullbleed .app-main {
@@ -1120,7 +1166,7 @@ select.input {
   display: flex;
   gap: 8px;
   padding: 8px;
-  border-radius: 999px;
+  border-radius: 22px;
   background: var(--blur-bg);
   -webkit-backdrop-filter: blur(24px) saturate(1.8);
   backdrop-filter: blur(24px) saturate(1.8);
@@ -1128,7 +1174,7 @@ select.input {
   border: 1px solid var(--border);
 }
 .action-bar .btn-ghost {
-  background: var(--component);
+  background: var(--surface);
 }
 .app:has(.action-bar) .app-main {
   padding-bottom: 0;
@@ -1202,6 +1248,28 @@ select.input {
   padding: 8px 0;
 }
 
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.about-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.about-head .h2 {
+  margin: 0;
+}
+.about-level {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
 /* ===== Админка ===== */
 .admin-row {
   display: flex;
@@ -1220,7 +1288,8 @@ select.input {
   font-size: 12px;
 }
 
-/* ===== Онбординг (Launch Screen + Walkthrough) ===== */
+/* ===== Онбординг (Launch Screen + Walkthrough) =====
+   Цвета не зависят от темы: как в макете, Launch — чёрный, Walkthrough — бордовый градиент. */
 .onb {
   position: fixed;
   inset: 0;
@@ -1228,14 +1297,13 @@ select.input {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--burgundy);
+  color: #fff;
   padding: calc(24px + var(--safe-top)) 24px calc(24px + var(--safe-bottom));
   animation: fade 0.3s;
 }
 .onb-launch {
   background: #000;
-  color: #fff;
 }
 .onb-art {
   position: absolute;
@@ -1247,23 +1315,23 @@ select.input {
   content: '';
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
+  filter: blur(70px);
 }
 .onb-art::before {
   width: 420px;
   height: 420px;
-  left: -140px;
-  top: 30%;
-  background: #387aff;
-  opacity: 0.55;
+  left: -150px;
+  top: 32%;
+  background: #9e212e;
+  opacity: 0.75;
 }
 .onb-art::after {
   width: 360px;
   height: 360px;
-  right: -140px;
-  top: 12%;
-  background: #1fc7a6;
-  opacity: 0.4;
+  right: -150px;
+  top: 14%;
+  background: #c28585;
+  opacity: 0.45;
 }
 .onb-tiles {
   position: absolute;
@@ -1281,13 +1349,13 @@ select.input {
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  border-radius: 34px;
+  border-radius: 32px;
   font-size: 50px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(245, 218, 191, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
   animation: float 6s ease-in-out infinite;
 }
 .onb-tile:nth-child(2n) {
@@ -1297,9 +1365,9 @@ select.input {
   animation-delay: -4s;
 }
 .onb-tile.is-hero {
-  background: linear-gradient(145deg, #7fa9ff, #387aff 55%, #2554c7);
-  border-color: rgba(255, 255, 255, 0.35);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5), 0 20px 50px rgba(56, 122, 255, 0.55);
+  background: linear-gradient(145deg, #f5dabf, #c28585);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 20px 50px rgba(194, 133, 133, 0.5);
 }
 @keyframes float {
   50% {
@@ -1318,10 +1386,9 @@ select.input {
 }
 .onb-launch-title {
   margin-top: 28px;
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  line-height: 36px;
   text-align: center;
 }
 .onb-launch-sub {
@@ -1333,28 +1400,32 @@ select.input {
 .onb-spacer {
   flex: 1;
 }
-.btn-galaxy {
-  background: var(--galaxy);
-  color: #fff;
-  box-shadow: 0 10px 30px rgba(56, 122, 255, 0.35);
+/* Кнопка из макета: персиковый градиент, бордовый текст */
+.btn-peach {
+  background: var(--peach);
+  color: #3d0a10;
+  box-shadow: 0 10px 30px rgba(194, 133, 133, 0.35);
 }
 .onb .btn {
   width: 100%;
   max-width: 420px;
   align-self: center;
-  min-height: 52px;
-  font-size: 16px;
 }
 
 .onb-logo {
   text-align: center;
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: -0.01em;
 }
 .onb-logo b {
-  color: var(--primary);
+  color: #f5dabf;
   font-weight: 700;
+}
+.onb-viewport {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  margin: 0 -24px;
 }
 .onb-slides {
   flex: 1;
@@ -1362,12 +1433,6 @@ select.input {
   width: 100%;
   touch-action: pan-y;
   transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
-}
-.onb-viewport {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-  margin: 0 -24px;
 }
 .onb-slide {
   flex: 0 0 100%;
@@ -1381,28 +1446,28 @@ select.input {
 }
 .onb-slide-title {
   margin-top: 36px;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  max-width: 320px;
+  line-height: 26px;
+  max-width: 300px;
 }
 .onb-slide-text {
-  color: var(--muted);
-  max-width: 320px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  max-width: 300px;
 }
 
-/* «3D»-плитка из стекла — как иллюстрация в Walkthrough */
+/* «3D»-плитка — как иллюстрация в Walkthrough */
 .glass-tile {
   position: relative;
   width: 168px;
   height: 168px;
   display: grid;
   place-items: center;
-  border-radius: 52px;
-  background: linear-gradient(150deg, #9dbcff 0%, #5a8fff 40%, #387aff 70%, #2a5fd6 100%);
-  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.55), inset 0 -10px 24px rgba(0, 20, 80, 0.3),
-    0 30px 60px rgba(56, 122, 255, 0.4);
+  border-radius: 50px;
+  background: linear-gradient(150deg, #fbe9d8 0%, #f5dabf 35%, #d9a79c 75%, #c28585 100%);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.7), inset 0 -10px 24px rgba(108, 21, 30, 0.25),
+    0 30px 60px rgba(40, 5, 10, 0.45);
   transform: perspective(600px) rotateX(14deg) rotateZ(-8deg);
   font-size: 84px;
 }
@@ -1410,8 +1475,8 @@ select.input {
   content: '';
   position: absolute;
   inset: 14px;
-  border-radius: 40px;
-  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 38px;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
 }
 .glass-tile-badge {
   position: absolute;
@@ -1422,9 +1487,9 @@ select.input {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: linear-gradient(150deg, #ff7a70, #f0443a);
-  color: #fff;
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), 0 10px 22px rgba(240, 68, 58, 0.45);
+  background: linear-gradient(150deg, #c2323f, #6c151e);
+  border: 2px solid rgba(245, 218, 191, 0.6);
+  box-shadow: 0 10px 22px rgba(40, 5, 10, 0.5);
   font-size: 26px;
 }
 .onb-dots {
@@ -1437,14 +1502,13 @@ select.input {
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: var(--faint);
-  opacity: 0.45;
-  transition: width 0.25s, opacity 0.25s, background 0.25s;
+  background: #fff;
+  opacity: 0.35;
+  transition: width 0.25s, opacity 0.25s;
 }
 .onb-dots span.is-on {
   width: 22px;
   opacity: 1;
-  background: var(--primary);
 }
 .onb-skip {
   align-self: center;
@@ -1452,11 +1516,11 @@ select.input {
   min-height: 32px;
   border: none;
   background: none;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 14px;
 }
 .onb-skip b {
-  color: var(--primary);
+  color: #f5dabf;
   font-weight: 600;
 }
 

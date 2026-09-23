@@ -49,7 +49,7 @@ export function LoginSheet({ open, onClose, onDone, reason }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <button className="btn btn-primary btn-block" disabled={busy || name.trim().length < 2}>
+        <button className="btn btn-primary btn-arrow btn-block" disabled={busy || name.trim().length < 2}>
           {busy ? 'Входим…' : 'Продолжить'}
         </button>
       </form>

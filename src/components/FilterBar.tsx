@@ -147,7 +147,7 @@ export function FilterBar({ location, onRequestLocation, geoPending }: Props) {
           <button className="btn btn-ghost" onClick={() => setFilters({ ...DEFAULT_FILTERS, query: filters.query })}>
             Сбросить
           </button>
-          <button className="btn btn-primary" onClick={() => setOpen(false)}>
+          <button className="btn btn-primary btn-arrow" onClick={() => setOpen(false)}>
             Показать
           </button>
         </div>

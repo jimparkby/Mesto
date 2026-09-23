@@ -57,10 +57,10 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       tg.expand();
       if (tg.isVersionAtLeast('7.7')) tg.disableVerticalSwipes?.();
       document.documentElement.dataset.platform = 'telegram';
-      // Палитра своя (One UI), от Telegram берём только светлую/тёмную схему.
+      // Палитра своя, от Telegram берём только светлую/тёмную схему.
       const applyScheme = () => {
         document.documentElement.dataset.scheme = tg.colorScheme;
-        const bg = tg.colorScheme === 'dark' ? '#000000' : '#f1f1f3';
+        const bg = tg.colorScheme === 'dark' ? '#140a0c' : '#f6f1ef';
         if (tg.isVersionAtLeast('6.1')) {
           tg.setHeaderColor?.(bg);
           tg.setBackgroundColor?.(bg);

@@ -54,6 +54,13 @@ export type NewEventInput = Pick<
 
 export type AuthProviderKind = 'telegram' | 'guest';
 
+/** Раздел «О себе» в профиле. */
+export interface AboutMe {
+  bio: string;
+  sports: SportId[];
+  level: Level;
+}
+
 export interface AppUser {
   id: string;
   name: string;
@@ -62,6 +69,7 @@ export interface AppUser {
   telegramId?: number | null;
   role: 'user' | 'admin';
   provider: AuthProviderKind;
+  about?: AboutMe | null;
 }
 
 export interface LatLng {

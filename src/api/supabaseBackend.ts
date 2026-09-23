@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AppUser, SportEvent } from '../domain/types';
+import type { AboutMe, AppUser, SportEvent } from '../domain/types';
 import { platform } from '../platforms';
 import type { Backend, Participant } from './types';
 
@@ -91,7 +91,9 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
 
   async function loadProfile(id: string): Promise<AppUser> {
     const p = check(await sb.from('profiles').select('*').eq('id', id).single<ProfileRow>());
-    return toUser(p);
+    // «О себе» живёт в user_metadata: читается из локальной сессии, без запроса к серверу.
+    const { data } = await sb.auth.getSession();
+    return { ...toUser(p), about: (data.session?.user.user_metadata?.about as AboutMe | undefined) ?? null };
   }
 
   return {
@@ -126,6 +128,12 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
 
     async signOut() {
       await sb.auth.signOut();
+    },
+
+    async updateAbout(user, about) {
+      const { error } = await sb.auth.updateUser({ data: { about } });
+      if (error) throw new Error(error.message);
+      return { ...user, about };
     },
 
     async listEvents(opts) {

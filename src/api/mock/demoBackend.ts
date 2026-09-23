@@ -106,6 +106,12 @@ export function createDemoBackend(): Backend {
       await persistUser(null);
     },
 
+    async updateAbout(user, about) {
+      const next = { ...user, about };
+      await persistUser(next);
+      return next;
+    },
+
     async listEvents(opts) {
       const s = load();
       return s.events

@@ -182,7 +182,7 @@ export function CreateEventPage() {
           />
         </label>
 
-        <button className="btn btn-primary btn-block" disabled={busy}>
+        <button className="btn btn-primary btn-arrow btn-block" disabled={busy}>
           {busy ? 'Публикуем…' : 'Опубликовать'}
         </button>
       </form>

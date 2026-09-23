@@ -99,7 +99,7 @@ export function EventPage() {
   else if (event.status !== 'published') cta = { label: 'Запись закрыта', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (joined) cta = { label: 'Отменить запись', action: () => join(false), kind: 'btn-ghost' };
   else if (full) cta = { label: 'Мест нет', action: () => {}, kind: 'btn-ghost', disabled: true };
-  else cta = { label: event.price > 0 ? `Записаться · ${formatPrice(event.price)}` : 'Записаться', action: () => join(true), kind: 'btn-primary' };
+  else cta = { label: event.price > 0 ? `Записаться · ${formatPrice(event.price)}` : 'Записаться', action: () => join(true), kind: 'btn-primary btn-arrow' };
 
   return (
     <div className="page event-page">

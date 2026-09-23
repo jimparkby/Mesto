@@ -1,16 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { AboutSection } from '../components/AboutSection';
 import { Avatar } from '../components/Avatar';
 import { EventCard } from '../components/EventCard';
 import { Icon } from '../components/Icon';
 import { LoginSheet } from '../components/LoginSheet';
 import { isPast } from '../domain/events';
 import { useEvents } from '../hooks';
-import { platform } from '../platforms';
-
-const PLATFORM_LABEL = { telegram: 'Telegram Mini App', native: 'Android-приложение', web: 'Веб-версия' };
 
 export function ProfilePage() {
   const { user, loading, error, signOut, myEventIds } = useAuth();
@@ -27,7 +24,12 @@ export function ProfilePage() {
     };
   }, [events, myEventIds, user?.id]);
 
-  if (loading) return <div className="page"><div className="card skeleton" /></div>;
+  if (loading)
+    return (
+      <div className="page">
+        <div className="card skeleton" />
+      </div>
+    );
 
   return (
     <div className="page">
@@ -85,7 +87,11 @@ export function ProfilePage() {
         {lists[tab].length === 0 && (
           <div className="empty">
             <p className="muted">
-              {tab === 'mine' ? 'Вы ещё не создавали событий.' : tab === 'past' ? 'История пока пуста.' : 'Вы пока никуда не записаны.'}
+              {tab === 'mine'
+                ? 'Вы ещё не создавали событий.'
+                : tab === 'past'
+                ? 'История пока пуста.'
+                : 'Вы пока никуда не записаны.'}
             </p>
             <Link className="btn btn-ghost" to={tab === 'mine' ? '/create' : '/'}>
               {tab === 'mine' ? 'Создать событие' : 'Найти тренировку'}
@@ -94,39 +100,29 @@ export function ProfilePage() {
         )}
       </div>
 
-      <section className="card settings">
-        {user?.role === 'admin' && (
-          <Link to="/admin" className="settings-row">
-            <span className="info-icon">
-              <Icon name="shield" size={20} />
-            </span>
-            <span className="grow">Модерация событий</span>
-            <Icon name="chevron" size={20} className="muted" />
-          </Link>
-        )}
-        <div className="settings-row">
-          <span className="info-icon">
-            <Icon name="phone" size={20} />
-          </span>
-          <span className="grow">Платформа</span>
-          <span className="muted">{PLATFORM_LABEL[platform.kind]}</span>
-        </div>
-        <div className="settings-row">
-          <span className="info-icon">
-            <Icon name="database" size={20} />
-          </span>
-          <span className="grow">Данные</span>
-          <span className="muted">{api.mode === 'demo' ? 'демо, на устройстве' : 'Supabase'}</span>
-        </div>
-        {user && user.provider !== 'telegram' && (
-          <button className="settings-row danger" onClick={signOut}>
-            <span className="info-icon">
-              <Icon name="logout" size={20} />
-            </span>
-            <span className="grow">Выйти</span>
-          </button>
-        )}
-      </section>
+      <AboutSection />
+
+      {(user?.role === 'admin' || (user && user.provider !== 'telegram')) && (
+        <section className="card settings">
+          {user?.role === 'admin' && (
+            <Link to="/admin" className="settings-row">
+              <span className="info-icon">
+                <Icon name="shield" size={20} />
+              </span>
+              <span className="grow">Модерация событий</span>
+              <Icon name="chevron" size={20} className="muted" />
+            </Link>
+          )}
+          {user && user.provider !== 'telegram' && (
+            <button className="settings-row danger" onClick={signOut}>
+              <span className="info-icon">
+                <Icon name="logout" size={20} />
+              </span>
+              <span className="grow">Выйти</span>
+            </button>
+          )}
+        </section>
+      )}
 
       <p className="footer-note">СпортРядом · MVP для Space University 2026</p>
 

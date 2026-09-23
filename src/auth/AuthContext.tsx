@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from '../api';
-import type { AppUser } from '../domain/types';
+import type { AboutMe, AppUser } from '../domain/types';
 import { platform } from '../platforms';
 
 interface AuthState {
@@ -11,6 +11,7 @@ interface AuthState {
   myEventIds: Set<string>;
   signInAsGuest(name: string): Promise<void>;
   signOut(): Promise<void>;
+  updateAbout(about: AboutMe): Promise<void>;
   refreshMyEvents(): Promise<void>;
   toggleRegistration(eventId: string, join: boolean): Promise<void>;
 }
@@ -70,6 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateAbout = useCallback(
+    async (about: AboutMe) => {
+      if (!user) throw new Error('Нужно войти');
+      setUser(await api.updateAbout(user, about));
+    },
+    [user],
+  );
+
   const toggleRegistration = useCallback(
     async (eventId: string, join: boolean) => {
       if (!user) throw new Error('Нужно войти');
@@ -86,8 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AuthState>(
-    () => ({ user, loading, error, myEventIds, signInAsGuest, signOut, refreshMyEvents, toggleRegistration }),
-    [user, loading, error, myEventIds, signInAsGuest, signOut, refreshMyEvents, toggleRegistration],
+    () => ({ user, loading, error, myEventIds, signInAsGuest, signOut, updateAbout, refreshMyEvents, toggleRegistration }),
+    [user, loading, error, myEventIds, signInAsGuest, signOut, updateAbout, refreshMyEvents, toggleRegistration],
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
