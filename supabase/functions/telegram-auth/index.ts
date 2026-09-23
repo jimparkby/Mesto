@@ -100,19 +100,23 @@ Deno.serve(async (req) => {
       email_confirm: true,
       user_metadata: meta,
     });
-    if (error) return json({ error: error.message }, 500);
-  } else {
-    // Обновляем имя/фото/username из Telegram при каждом входе.
-    await admin.auth.admin.updateUserById(existing.id, { user_metadata: meta });
-    await admin
-      .from('profiles')
-      .update({ name: meta.name, username: meta.username, photo_url: meta.photo_url })
-      .eq('id', existing.id);
+    // Аккаунт мог остаться без строки в profiles (например, её удалили вручную) —
+    // тогда просто входим ниже и восстанавливаем профиль.
+    if (error && (error as { code?: string }).code !== 'email_exists') return json({ error: error.message }, 500);
   }
 
   const anon = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
   const { data, error } = await anon.auth.signInWithPassword({ email, password });
   if (error || !data.session) return json({ error: error?.message ?? 'no session' }, 500);
+
+  // Обновляем имя/фото/username из Telegram при каждом входе; профиль создаётся, если его нет.
+  const userId = data.session.user.id;
+  await admin.auth.admin.updateUserById(userId, { user_metadata: meta });
+  const { error: profileError } = await admin.from('profiles').upsert(
+    { id: userId, name: meta.name, username: meta.username, photo_url: meta.photo_url, telegram_id: tgUser.id },
+    { onConflict: 'id' },
+  );
+  if (profileError) return json({ error: profileError.message }, 500);
 
   return json({
     access_token: data.session.access_token,
