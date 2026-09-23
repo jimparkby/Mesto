@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { LoginSheet } from '../components/LoginSheet';
+import { PageHeader } from '../components/PageHeader';
 import { MapView } from '../components/MapView';
 import { LEVELS, SPORTS } from '../domain/sports';
 import type { LatLng, Level, SportId } from '../domain/types';
@@ -82,12 +83,7 @@ export function CreateEventPage() {
 
   return (
     <div className="page">
-      <header className="page-header">
-        <div>
-          <div className="eyebrow">Организатору</div>
-          <h1 className="h1">Новое событие</h1>
-        </div>
-      </header>
+      <PageHeader eyebrow="Организатору" title="Новое событие" />
 
       {!user && (
         <div className="card callout">

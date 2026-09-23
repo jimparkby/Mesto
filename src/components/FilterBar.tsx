@@ -3,6 +3,7 @@ import { countActiveFilters, DATE_RANGES, DEFAULT_FILTERS, RADII } from '../doma
 import { LEVELS, SPORTS } from '../domain/sports';
 import type { LatLng, SportId } from '../domain/types';
 import { useFilters } from '../state';
+import { Icon } from './Icon';
 import { Sheet } from './Sheet';
 
 interface Props {
@@ -25,15 +26,20 @@ export function FilterBar({ location, onRequestLocation, geoPending }: Props) {
   return (
     <div className="filterbar">
       <div className="search-row">
-        <input
-          className="input search"
-          type="search"
-          placeholder="Поиск: парк, вид спорта, организатор…"
-          value={filters.query}
-          onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
-        />
+        <label className="search-box">
+          <Icon name="search" size={20} />
+          <input
+            className="input"
+            type="search"
+            placeholder="Поиск событий"
+            aria-label="Поиск"
+            value={filters.query}
+            onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
+          />
+        </label>
         <button className={`btn-icon${active ? ' is-active' : ''}`} onClick={() => setOpen(true)} aria-label="Фильтры">
-          ⚙️{active > 0 && <span className="dot">{active}</span>}
+          <Icon name="filter" size={22} />
+          {active > 0 && <span className="dot">{active}</span>}
         </button>
       </div>
 
@@ -51,7 +57,8 @@ export function FilterBar({ location, onRequestLocation, geoPending }: Props) {
             setFilters((f) => ({ ...f, radiusKm: f.radiusKm ? null : 3 }));
           }}
         >
-          {geoPending ? '…' : '📍 Рядом'}
+          <Icon name="pin" size={16} />
+          {geoPending ? '…' : 'Рядом'}
         </button>
         {SPORTS.map((s) => (
           <button
@@ -129,6 +136,7 @@ export function FilterBar({ location, onRequestLocation, geoPending }: Props) {
         <label className="switch-row">
           <span>Только бесплатные</span>
           <input
+            className="switch"
             type="checkbox"
             checked={filters.freeOnly}
             onChange={(e) => setFilters((f) => ({ ...f, freeOnly: e.target.checked }))}

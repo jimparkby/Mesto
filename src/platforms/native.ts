@@ -15,7 +15,7 @@ export function createNativePlatform(): Platform {
       document.documentElement.dataset.platform = 'native';
       const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       await StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light }).catch(() => {});
-      await StatusBar.setBackgroundColor({ color: dark ? '#0f1115' : '#ffffff' }).catch(() => {});
+      await StatusBar.setBackgroundColor({ color: dark ? '#000000' : '#f1f1f3' }).catch(() => {});
 
       // Аппаратная кнопка «Назад»: сначала внутренняя навигация, на корневом экране — выход.
       await App.addListener('backButton', () => {

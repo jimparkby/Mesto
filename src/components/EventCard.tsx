@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { distanceKm, formatDistance, formatPrice, formatWhen, isFull, pluralPlaces, spotsLeft } from '../domain/events';
 import { levelLabel, sportMeta } from '../domain/sports';
 import type { LatLng, SportEvent } from '../domain/types';
+import { Icon } from './Icon';
 
 interface Props {
   event: SportEvent;
@@ -17,7 +18,7 @@ export function EventCard({ event: e, location, joined, compact }: Props) {
 
   return (
     <Link to={`/event/${e.id}`} className={`card event-card${compact ? ' is-compact' : ''}`}>
-      <div className="event-card-icon" style={{ background: `${meta.color}22`, color: meta.color }}>
+      <div className="event-card-icon" style={{ background: `${meta.color}1f`, color: meta.color }}>
         <span aria-hidden>{meta.emoji}</span>
       </div>
       <div className="event-card-body">
@@ -29,10 +30,16 @@ export function EventCard({ event: e, location, joined, compact }: Props) {
           {e.status !== 'published' && <span className="badge badge-warn">{e.status === 'hidden' ? 'Скрыто' : 'Отменено'}</span>}
         </div>
         <h3 className="event-card-title">{e.title}</h3>
-        <div className="event-card-meta">🕒 {formatWhen(e)}</div>
         <div className="event-card-meta">
-          📍 {e.venueName}
-          {location && <span className="muted"> · {formatDistance(distanceKm(location, e))}</span>}
+          <Icon name="clock" size={15} />
+          <span>{formatWhen(e)}</span>
+        </div>
+        <div className="event-card-meta">
+          <Icon name="pin" size={15} />
+          <span>
+            {e.venueName}
+            {location && ` · ${formatDistance(distanceKm(location, e))}`}
+          </span>
         </div>
         {!compact && (
           <div className="event-card-footer">

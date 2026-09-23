@@ -20,6 +20,8 @@ interface TgWebApp {
   disableVerticalSwipes?: () => void;
   setHeaderColor?: (c: string) => void;
   setBackgroundColor?: (c: string) => void;
+  setBottomBarColor?: (c: string) => void;
+  onEvent(event: 'themeChanged', cb: () => void): void;
   BackButton: TgButton;
   HapticFeedback?: {
     impactOccurred(s: 'light' | 'medium' | 'heavy'): void;
@@ -55,7 +57,18 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       tg.expand();
       if (tg.isVersionAtLeast('7.7')) tg.disableVerticalSwipes?.();
       document.documentElement.dataset.platform = 'telegram';
-      document.documentElement.dataset.scheme = tg.colorScheme;
+      // Палитра своя (One UI), от Telegram берём только светлую/тёмную схему.
+      const applyScheme = () => {
+        document.documentElement.dataset.scheme = tg.colorScheme;
+        const bg = tg.colorScheme === 'dark' ? '#000000' : '#f1f1f3';
+        if (tg.isVersionAtLeast('6.1')) {
+          tg.setHeaderColor?.(bg);
+          tg.setBackgroundColor?.(bg);
+        }
+        if (tg.isVersionAtLeast('7.10')) tg.setBottomBarColor?.(bg);
+      };
+      applyScheme();
+      tg.onEvent('themeChanged', applyScheme);
     },
     setBackHandler(handler) {
       if (!handler) {

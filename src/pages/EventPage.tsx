@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, type Participant } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
+import { Icon, type IconName } from '../components/Icon';
 import { LoginSheet } from '../components/LoginSheet';
 import { MapView } from '../components/MapView';
 import { formatPrice, formatWhen, isFull, isPast, pluralPlaces, spotsLeft } from '../domain/events';
@@ -12,6 +13,17 @@ import { platform } from '../platforms';
 import { useToast } from '../state';
 
 const TG_APP_LINK = import.meta.env.VITE_TG_APP_LINK as string | undefined;
+
+function InfoRow({ icon, children }: { icon: IconName; children: ReactNode }) {
+  return (
+    <div className="info-row">
+      <span className="info-icon">
+        <Icon name={icon} size={20} />
+      </span>
+      <div className="grow">{children}</div>
+    </div>
+  );
+}
 
 function shareUrl(e: SportEvent): string {
   // Лучше всего делиться ссылкой на Mini App — она откроет событие прямо в Telegram.
@@ -97,43 +109,29 @@ export function EventPage() {
         </span>
         <div className="event-hero-sport">{meta.label}</div>
         <h1 className="event-hero-title">{event.title}</h1>
-        {joined && <span className="badge badge-on-hero">✓ Вы идёте</span>}
+        {joined && (
+          <span className="badge badge-on-hero">
+            <Icon name="check" size={13} strokeWidth={2.6} /> Вы идёте
+          </span>
+        )}
       </div>
 
       <div className="card info-list">
-        <div className="info-row">
-          <span>🕒</span>
-          <div>{formatWhen(event)}</div>
-        </div>
-        <div className="info-row">
-          <span>📍</span>
-          <div>
-            <div>{event.venueName}</div>
-            <div className="muted">{event.address}</div>
-          </div>
-        </div>
-        <div className="info-row">
-          <span>💳</span>
-          <div>{formatPrice(event.price)}</div>
-        </div>
-        <div className="info-row">
-          <span>📈</span>
-          <div>{levelLabel(event.level)}</div>
-        </div>
-        <div className="info-row">
-          <span>👥</span>
-          <div>
-            {event.registeredCount} из {event.capacity}
-            {!full && !past && <span className="muted"> · осталось {pluralPlaces(spotsLeft(event))}</span>}
-          </div>
-        </div>
-        <div className="info-row">
-          <span>🧑‍🏫</span>
-          <div>
-            Организатор: <b>{event.organizerName || '—'}</b>
-            {isOrganizer && <span className="badge badge-ok"> это вы</span>}
-          </div>
-        </div>
+        <InfoRow icon="clock">{formatWhen(event)}</InfoRow>
+        <InfoRow icon="pin">
+          <div>{event.venueName}</div>
+          {event.address && <div className="muted">{event.address}</div>}
+        </InfoRow>
+        <InfoRow icon="wallet">{formatPrice(event.price)}</InfoRow>
+        <InfoRow icon="level">{levelLabel(event.level)}</InfoRow>
+        <InfoRow icon="users">
+          {event.registeredCount} из {event.capacity}
+          {!full && !past && <span className="muted"> · осталось {pluralPlaces(spotsLeft(event))}</span>}
+        </InfoRow>
+        <InfoRow icon="whistle">
+          Организатор: <b>{event.organizerName || '—'}</b>
+          {isOrganizer && <span className="badge badge-ok"> это вы</span>}
+        </InfoRow>
       </div>
 
       {event.description && (
@@ -162,14 +160,15 @@ export function EventPage() {
 
       <section className="card no-pad">
         <MapView events={[event]} center={{ lat: event.lat, lng: event.lng }} zoom={14} className="map-mini" />
-        <button className="btn btn-ghost btn-block square-top" onClick={route}>
-          🧭 Построить маршрут
+        <button className="route-btn" onClick={route}>
+          <Icon name="route" size={20} />
+          Построить маршрут
         </button>
       </section>
 
       <div className="action-bar">
-        <button className="btn btn-icon-lg" onClick={share} aria-label="Поделиться">
-          📤
+        <button className="btn btn-ghost btn-round" onClick={share} aria-label="Поделиться">
+          <Icon name="share" size={22} />
         </button>
         <button className={`btn ${cta.kind} btn-grow`} disabled={cta.disabled || busy} onClick={cta.action}>
           {busy ? '…' : cta.label}

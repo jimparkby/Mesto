@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { platform } from '../platforms';
+import { Icon, type IconName } from './Icon';
 
-const TABS = [
-  { to: '/', label: 'События', icon: '🏟️' },
-  { to: '/map', label: 'Карта', icon: '🗺️' },
-  { to: '/create', label: 'Создать', icon: '➕' },
-  { to: '/profile', label: 'Профиль', icon: '👤' },
+const TABS: { to: string; label: string; icon: IconName }[] = [
+  { to: '/', label: 'События', icon: 'events' },
+  { to: '/map', label: 'Карта', icon: 'map' },
+  { to: '/create', label: 'Создать', icon: 'plus' },
+  { to: '/profile', label: 'Профиль', icon: 'user' },
 ];
 
 const ROOTS = new Set(TABS.map((t) => t.to));
@@ -45,11 +46,11 @@ export function Layout() {
               key={t.to}
               to={t.to}
               end
-              className={({ isActive }) => `tab${isActive ? ' is-active' : ''}`}
+              className={({ isActive }) => `tab${t.to === '/create' ? ' tab-create' : ''}${isActive ? ' is-active' : ''}`}
               onClick={() => platform.haptic('selection')}
             >
-              <span className="tab-icon" aria-hidden>
-                {t.icon}
+              <span className="tab-icon">
+                <Icon name={t.icon} size={t.to === '/create' ? 22 : 24} />
               </span>
               <span className="tab-label">{t.label}</span>
             </NavLink>

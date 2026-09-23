@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { api } from '../api';
 import { EventCard } from '../components/EventCard';
 import { FilterBar } from '../components/FilterBar';
+import { PageHeader } from '../components/PageHeader';
 import { formatDay, isPast } from '../domain/events';
 import { applyFilters, countActiveFilters, DEFAULT_FILTERS, sortEvents } from '../domain/filters';
 import { useEvents, useGeolocation } from '../hooks';
@@ -34,13 +35,9 @@ export function HomePage() {
 
   return (
     <div className="page">
-      <header className="page-header">
-        <div>
-          <div className="eyebrow">Минск</div>
-          <h1 className="h1">{user ? `Привет, ${user.name.split(' ')[0]}!` : 'СпортРядом'}</h1>
-        </div>
-        {api.mode === 'demo' && <span className="badge badge-muted" title="Данные хранятся на устройстве">демо</span>}
-      </header>
+      <PageHeader eyebrow="Спорт рядом · Минск" title={user ? `Привет, ${user.name.split(' ')[0]}!` : 'СпортРядом'}>
+        {api.mode === 'demo' && <span className="badge badge-muted" title="Данные хранятся на устройстве">демо-режим</span>}
+      </PageHeader>
 
       <FilterBar location={geo.location} onRequestLocation={geo.request} geoPending={geo.status === 'pending'} />
 

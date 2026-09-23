@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PageHeader } from '../components/PageHeader';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { formatWhen, isPast } from '../domain/events';
@@ -53,12 +54,7 @@ export function AdminPage() {
 
   return (
     <div className="page">
-      <header className="page-header">
-        <div>
-          <div className="eyebrow">Админ</div>
-          <h1 className="h1">Модерация</h1>
-        </div>
-      </header>
+      <PageHeader eyebrow="Админ" title="Модерация" />
 
       <div className="stats">
         <div className="stat">

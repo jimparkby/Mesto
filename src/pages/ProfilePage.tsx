@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { EventCard } from '../components/EventCard';
+import { Icon } from '../components/Icon';
 import { LoginSheet } from '../components/LoginSheet';
 import { isPast } from '../domain/events';
 import { useEvents } from '../hooks';
@@ -31,26 +32,22 @@ export function ProfilePage() {
   return (
     <div className="page">
       {user ? (
-        <div className="card profile-card">
-          <Avatar name={user.name} photoUrl={user.photoUrl} size={64} />
-          <div className="grow">
-            <h1 className="h1">{user.name}</h1>
-            <div className="muted">
-              {user.username ? `@${user.username} · ` : ''}
-              {user.provider === 'telegram' ? 'вход через Telegram' : 'гость'}
-            </div>
+        <header className="profile-head">
+          <Avatar name={user.name} photoUrl={user.photoUrl} size={88} />
+          <h1 className="big-title">{user.name}</h1>
+          <div className="muted">
+            {user.username ? `@${user.username} · ` : ''}
+            {user.provider === 'telegram' ? 'вход через Telegram' : 'гость'}
           </div>
-        </div>
+        </header>
       ) : (
-        <div className="card profile-card">
-          <Avatar name="?" size={64} />
-          <div className="grow">
-            <h1 className="h1">Вы не вошли</h1>
-            <button className="btn btn-primary" onClick={() => setLoginOpen(true)}>
-              Войти
-            </button>
-          </div>
-        </div>
+        <header className="profile-head">
+          <Avatar name="?" size={88} />
+          <h1 className="big-title">Вы не вошли</h1>
+          <button className="btn btn-primary btn-sm" onClick={() => setLoginOpen(true)}>
+            Войти
+          </button>
+        </header>
       )}
       {error && <p className="hint">Ошибка входа: {error}</p>}
 
@@ -100,18 +97,33 @@ export function ProfilePage() {
       <section className="card settings">
         {user?.role === 'admin' && (
           <Link to="/admin" className="settings-row">
-            🛡️ Модерация событий <span className="muted">›</span>
+            <span className="info-icon">
+              <Icon name="shield" size={20} />
+            </span>
+            <span className="grow">Модерация событий</span>
+            <Icon name="chevron" size={20} className="muted" />
           </Link>
         )}
         <div className="settings-row">
-          📱 Платформа <span className="muted">{PLATFORM_LABEL[platform.kind]}</span>
+          <span className="info-icon">
+            <Icon name="phone" size={20} />
+          </span>
+          <span className="grow">Платформа</span>
+          <span className="muted">{PLATFORM_LABEL[platform.kind]}</span>
         </div>
         <div className="settings-row">
-          🗄️ Данные <span className="muted">{api.mode === 'demo' ? 'демо (на устройстве)' : 'Supabase'}</span>
+          <span className="info-icon">
+            <Icon name="database" size={20} />
+          </span>
+          <span className="grow">Данные</span>
+          <span className="muted">{api.mode === 'demo' ? 'демо, на устройстве' : 'Supabase'}</span>
         </div>
         {user && user.provider !== 'telegram' && (
           <button className="settings-row danger" onClick={signOut}>
-            Выйти
+            <span className="info-icon">
+              <Icon name="logout" size={20} />
+            </span>
+            <span className="grow">Выйти</span>
           </button>
         )}
       </section>
