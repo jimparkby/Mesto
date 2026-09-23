@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AboutMe, AppUser, SportEvent } from '../domain/types';
+import type { AppUser, Level, SportEvent, SportId } from '../domain/types';
 import { platform } from '../platforms';
 import type { Backend, Participant } from './types';
 
@@ -31,6 +31,9 @@ interface ProfileRow {
   photo_url: string | null;
   telegram_id: number | null;
   role: 'user' | 'admin';
+  bio: string;
+  fav_sports: SportId[];
+  skill_level: Level;
 }
 
 function toEvent(r: EventRow): SportEvent {
@@ -65,6 +68,7 @@ function toUser(p: ProfileRow): AppUser {
     telegramId: p.telegram_id,
     role: p.role,
     provider: p.telegram_id ? 'telegram' : 'guest',
+    about: { bio: p.bio ?? '', sports: p.fav_sports ?? [], level: p.skill_level ?? 'any' },
   };
 }
 
@@ -91,9 +95,7 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
 
   async function loadProfile(id: string): Promise<AppUser> {
     const p = check(await sb.from('profiles').select('*').eq('id', id).single<ProfileRow>());
-    // «О себе» живёт в user_metadata: читается из локальной сессии, без запроса к серверу.
-    const { data } = await sb.auth.getSession();
-    return { ...toUser(p), about: (data.session?.user.user_metadata?.about as AboutMe | undefined) ?? null };
+    return toUser(p);
   }
 
   return {
@@ -131,7 +133,10 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
     },
 
     async updateAbout(user, about) {
-      const { error } = await sb.auth.updateUser({ data: { about } });
+      const { error } = await sb
+        .from('profiles')
+        .update({ bio: about.bio, fav_sports: about.sports, skill_level: about.level })
+        .eq('id', user.id);
       if (error) throw new Error(error.message);
       return { ...user, about };
     },
