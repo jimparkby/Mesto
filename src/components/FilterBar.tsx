@@ -5,6 +5,7 @@ import type { LatLng, SportId } from '../domain/types';
 import { useFilters } from '../state';
 import { Icon } from './Icon';
 import { Sheet } from './Sheet';
+import { SportIcon } from './SportIcon';
 
 interface Props {
   location: LatLng | null;
@@ -27,7 +28,7 @@ export function FilterBar({ location, onRequestLocation, geoPending }: Props) {
     <div className="filterbar">
       <div className="search-row">
         <label className="search-box">
-          <Icon name="search" size={20} />
+          <Icon name="search" size={20} weight="bold" />
           <input
             className="input"
             type="search"
@@ -38,7 +39,7 @@ export function FilterBar({ location, onRequestLocation, geoPending }: Props) {
           />
         </label>
         <button className={`btn-icon${active ? ' is-active' : ''}`} onClick={() => setOpen(true)} aria-label="Фильтры">
-          <Icon name="filter" size={22} />
+          <Icon name="filter" size={22} weight="bold" />
           {active > 0 && <span className="dot">{active}</span>}
         </button>
       </div>
@@ -57,7 +58,7 @@ export function FilterBar({ location, onRequestLocation, geoPending }: Props) {
             setFilters((f) => ({ ...f, radiusKm: f.radiusKm ? null : 3 }));
           }}
         >
-          <Icon name="pin" size={16} />
+          <Icon name="near" size={16} className="chip-icon" />
           {geoPending ? '…' : 'Рядом'}
         </button>
         {SPORTS.map((s) => (
@@ -66,7 +67,8 @@ export function FilterBar({ location, onRequestLocation, geoPending }: Props) {
             className={`chip${filters.sports.includes(s.id) ? ' is-on' : ''}`}
             onClick={() => toggleSport(s.id)}
           >
-            {s.emoji} {s.label}
+            <SportIcon sport={s.id} size={18} color={filters.sports.includes(s.id) ? undefined : s.color} />
+            {s.label}
           </button>
         ))}
       </div>

@@ -3,6 +3,7 @@ import { distanceKm, formatDistance, formatPrice, formatWhen, isFull, pluralPlac
 import { levelLabel, sportMeta } from '../domain/sports';
 import type { LatLng, SportEvent } from '../domain/types';
 import { Icon } from './Icon';
+import { SportIcon } from './SportIcon';
 
 interface Props {
   event: SportEvent;
@@ -18,8 +19,8 @@ export function EventCard({ event: e, location, joined, compact }: Props) {
 
   return (
     <Link to={`/event/${e.id}`} className={`card event-card${compact ? ' is-compact' : ''}`}>
-      <div className="event-card-icon" style={{ background: `${meta.color}1f`, color: meta.color }}>
-        <span aria-hidden>{meta.emoji}</span>
+      <div className="event-card-icon" style={{ background: meta.color }}>
+        <SportIcon sport={e.sport} size={30} color="#fff" />
       </div>
       <div className="event-card-body">
         <div className="event-card-top">

@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { MINSK_CENTER, sportMeta } from '../domain/sports';
+import { MapPin } from '@phosphor-icons/react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
+import { MINSK_CENTER, SPORTS, sportMeta } from '../domain/sports';
 import type { LatLng, SportEvent } from '../domain/types';
+import { SportIcon } from './SportIcon';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
@@ -118,6 +122,19 @@ interface Props {
   className?: string;
 }
 
+// Маркеры — обычные DOM-элементы вне React, поэтому разметку глифов готовим один раз при загрузке
+// модуля (без react-dom/server — он заметно утяжелил бы бандл).
+function toMarkup(node: ReactElement): string {
+  const div = document.createElement('div');
+  const root = createRoot(div);
+  flushSync(() => root.render(node));
+  const html = div.innerHTML;
+  root.unmount();
+  return html;
+}
+const SPORT_GLYPHS = new Map(SPORTS.map((s) => [s.id, toMarkup(<SportIcon sport={s.id} size={20} color="#fff" />)]));
+const PICK_GLYPH = toMarkup(<MapPin size={22} weight="fill" color="#fff" aria-hidden />);
+
 export function MapView({ events = [], selectedId, onSelect, userLocation, pick, center, zoom = 11, className }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<{ map: GlMap; lib: GlLib } | null>(null);
@@ -179,7 +196,7 @@ export function MapView({ events = [], selectedId, onSelect, userLocation, pick,
       el.type = 'button';
       el.className = 'map-pin' + (e.id === selectedId ? ' is-selected' : '');
       el.style.setProperty('--pin', meta.color);
-      el.innerHTML = `<span>${meta.emoji}</span>`;
+      el.innerHTML = SPORT_GLYPHS.get(e.sport) ?? '';
       el.setAttribute('aria-label', e.title);
       el.addEventListener('click', (ev) => {
         ev.stopPropagation();
@@ -212,7 +229,8 @@ export function MapView({ events = [], selectedId, onSelect, userLocation, pick,
     if (pickValue) {
       const el = document.createElement('div');
       el.className = 'map-pin is-selected';
-      el.innerHTML = '<span>📍</span>';
+      el.style.setProperty('--pin', '#9e212e');
+      el.innerHTML = PICK_GLYPH;
       pickMarkerRef.current = new m.lib.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([pickValue.lng, pickValue.lat])
         .addTo(m.map);

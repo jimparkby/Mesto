@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { api } from '../api';
 import { EventCard } from '../components/EventCard';
 import { FilterBar } from '../components/FilterBar';
+import { Icon } from '../components/Icon';
 import { PageHeader } from '../components/PageHeader';
 import { formatDay, isPast } from '../domain/events';
 import { applyFilters, countActiveFilters, DEFAULT_FILTERS, sortEvents } from '../domain/filters';
@@ -81,7 +82,9 @@ export function HomePage() {
 
       {!loading && !error && visible.length === 0 && (
         <div className="empty">
-          <div className="empty-emoji">🤷</div>
+          <div className="empty-emoji">
+            <Icon name="search" size={40} />
+          </div>
           <p>{hasFilters ? 'По этим фильтрам ничего нет.' : 'Пока нет событий.'}</p>
           {hasFilters && (
             <button className="btn btn-ghost" onClick={() => setFilters(DEFAULT_FILTERS)}>

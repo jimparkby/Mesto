@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { api, type Participant } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
-import { Icon, type IconName } from '../components/Icon';
+import { Icon, IconTile, TILE, type IconName } from '../components/Icon';
+import { SportIcon } from '../components/SportIcon';
 import { LoginSheet } from '../components/LoginSheet';
 import { MapView } from '../components/MapView';
 import { formatPrice, formatWhen, isFull, isPast, pluralPlaces, spotsLeft } from '../domain/events';
@@ -14,12 +15,10 @@ import { useToast } from '../state';
 
 const TG_APP_LINK = import.meta.env.VITE_TG_APP_LINK as string | undefined;
 
-function InfoRow({ icon, children }: { icon: IconName; children: ReactNode }) {
+function InfoRow({ icon, color, children }: { icon: IconName; color: string; children: ReactNode }) {
   return (
     <div className="info-row">
-      <span className="info-icon">
-        <Icon name={icon} size={20} />
-      </span>
+      <IconTile name={icon} color={color} />
       <div className="grow">{children}</div>
     </div>
   );
@@ -55,7 +54,9 @@ export function EventPage() {
   if (event === null)
     return (
       <div className="page empty">
-        <div className="empty-emoji">🔍</div>
+        <div className="empty-emoji">
+          <Icon name="search" size={40} />
+        </div>
         <p>Событие не найдено или удалено.</p>
         <Link to="/" className="btn btn-ghost">
           К списку событий
@@ -77,7 +78,7 @@ export function EventPage() {
     setBusy(true);
     try {
       await toggleRegistration(event.id, want);
-      toast(want ? 'Вы записаны! Увидимся на тренировке 💪' : 'Запись отменена', want ? 'success' : 'info');
+      toast(want ? 'Вы записаны! Увидимся на тренировке' : 'Запись отменена', want ? 'success' : 'info');
       await load();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -105,30 +106,30 @@ export function EventPage() {
     <div className="page event-page">
       <div className="event-hero" style={{ background: `linear-gradient(135deg, ${meta.color}, ${meta.color}aa)` }}>
         <span className="event-hero-emoji" aria-hidden>
-          {meta.emoji}
+          <SportIcon sport={event.sport} size={44} color="#fff" />
         </span>
         <div className="event-hero-sport">{meta.label}</div>
         <h1 className="event-hero-title">{event.title}</h1>
         {joined && (
           <span className="badge badge-on-hero">
-            <Icon name="check" size={13} strokeWidth={2.6} /> Вы идёте
+            <Icon name="check" size={14} /> Вы идёте
           </span>
         )}
       </div>
 
       <div className="card info-list">
-        <InfoRow icon="clock">{formatWhen(event)}</InfoRow>
-        <InfoRow icon="pin">
+        <InfoRow icon="clock" color={TILE.gray}>{formatWhen(event)}</InfoRow>
+        <InfoRow icon="pin" color={TILE.red}>
           <div>{event.venueName}</div>
           {event.address && <div className="muted">{event.address}</div>}
         </InfoRow>
-        <InfoRow icon="wallet">{formatPrice(event.price)}</InfoRow>
-        <InfoRow icon="level">{levelLabel(event.level)}</InfoRow>
-        <InfoRow icon="users">
+        <InfoRow icon="wallet" color={TILE.green}>{formatPrice(event.price)}</InfoRow>
+        <InfoRow icon="level" color={TILE.indigo}>{levelLabel(event.level)}</InfoRow>
+        <InfoRow icon="users" color={TILE.blue}>
           {event.registeredCount} из {event.capacity}
           {!full && !past && <span className="muted"> · осталось {pluralPlaces(spotsLeft(event))}</span>}
         </InfoRow>
-        <InfoRow icon="whistle">
+        <InfoRow icon="organizer" color={TILE.orange}>
           Организатор: <b>{event.organizerName || '—'}</b>
           {isOrganizer && <span className="badge badge-ok"> это вы</span>}
         </InfoRow>
@@ -168,7 +169,7 @@ export function EventPage() {
 
       <div className="action-bar">
         <button className="btn btn-ghost btn-round" onClick={share} aria-label="Поделиться">
-          <Icon name="share" size={22} />
+          <Icon name="share" size={22} weight="bold" />
         </button>
         <button className={`btn ${cta.kind} btn-grow`} disabled={cta.disabled || busy} onClick={cta.action}>
           {busy ? '…' : cta.label}

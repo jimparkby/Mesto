@@ -1,28 +1,41 @@
+import { Lightning, MapPin, MapTrifold, Plus, SoccerBall, UsersThree, type Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
+import type { SportId } from '../domain/types';
 import { platform } from '../platforms';
+import { SportIcon } from './SportIcon';
 
-const SLIDES = [
+const SLIDES: { Glyph: PhosphorIcon; Badge: PhosphorIcon; title: string; text: string }[] = [
   {
-    emoji: '⚽',
-    badge: '📍',
+    Glyph: SoccerBall,
+    Badge: MapPin,
     title: 'Тренировки и игры в двух шагах от дома',
     text: 'Футбол, бег, йога, воркаут — всё, что проходит рядом с тобой в Минске.',
   },
   {
-    emoji: '🗺️',
-    badge: '⚡',
+    Glyph: MapTrifold,
+    Badge: Lightning,
     title: 'Находи на карте и записывайся в один клик',
     text: 'Фильтры по виду спорта, дате, уровню и расстоянию. Места считаются в реальном времени.',
   },
   {
-    emoji: '🤝',
-    badge: '➕',
+    Glyph: UsersThree,
+    Badge: Plus,
     title: 'Собирай свою команду',
     text: 'Создай событие за минуту и поделись ссылкой прямо в Telegram.',
   },
 ];
 
-const LAUNCH_TILES = ['🏃', '🏀', '🎾', '🏐', '⚽', '🚴', '🧘', '💪', '🏊'];
+const LAUNCH_TILES: SportId[] = [
+  'running',
+  'basketball',
+  'tennis',
+  'volleyball',
+  'football',
+  'cycling',
+  'yoga',
+  'workout',
+  'swimming',
+];
 
 interface Props {
   onDone: () => void;
@@ -54,7 +67,7 @@ export function Onboarding({ onDone }: Props) {
           <div className="onb-tiles">
             {LAUNCH_TILES.map((t, i) => (
               <div key={t} className={`onb-tile${i === 4 ? ' is-hero' : ''}`}>
-                {t}
+                <SportIcon sport={t} size={48} color={i === 4 ? '#6c151e' : '#f5dabf'} />
               </div>
             ))}
           </div>
@@ -95,8 +108,10 @@ export function Onboarding({ onDone }: Props) {
           {SLIDES.map((s, i) => (
             <section key={s.title} className="onb-slide" aria-hidden={i !== slide}>
               <div className="glass-tile" aria-hidden>
-                {s.emoji}
-                <span className="glass-tile-badge">{s.badge}</span>
+                <s.Glyph size={88} weight="fill" color="#9e212e" />
+                <span className="glass-tile-badge">
+                  <s.Badge size={26} weight="fill" color="#fff" />
+                </span>
               </div>
               <h2 className="onb-slide-title">{s.title}</h2>
               <p className="onb-slide-text">{s.text}</p>

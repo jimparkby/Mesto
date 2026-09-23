@@ -317,6 +317,21 @@ p {
   background: none;
 }
 
+/* ===== Иконки ===== */
+.icon-tile {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 28%;
+  color: #fff;
+}
+.chip-icon {
+  color: #007aff;
+}
+.chip.is-on .chip-icon {
+  color: inherit;
+}
+
 /* ===== Контейнеры ===== */
 .card {
   background: var(--surface);
@@ -348,10 +363,10 @@ p {
   flex: none;
   width: 52px;
   height: 52px;
-  border-radius: 18px;
+  border-radius: 15px;
   display: grid;
   place-items: center;
-  font-size: 28px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .event-card-body {
   flex: 1;
@@ -446,6 +461,9 @@ p {
 }
 
 .chip-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   font-weight: 500;
   padding: 3px 10px;
@@ -486,9 +504,9 @@ p {
   height: 88px;
   display: grid;
   place-items: center;
-  border-radius: 30px;
+  border-radius: 26px;
   background: var(--surface);
-  font-size: 44px;
+  color: var(--faint);
 }
 
 /* ===== Кнопки и поля ===== */
@@ -941,27 +959,25 @@ select.input {
   height: 260px;
 }
 .map-pin {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   display: grid;
   place-items: center;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-  background: #fff;
-  border: 3px solid var(--pin, #9e212e);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
-  font-size: 18px;
-}
-.map-pin > span {
-  display: block;
-  transform: rotate(45deg);
+  border-radius: 50%;
+  background: var(--pin, #9e212e);
+  border: 2.5px solid #fff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+  transition: width 0.15s, height 0.15s;
 }
 .map-pin.is-selected {
   width: 46px;
   height: 46px;
-  font-size: 22px;
   z-index: 2;
+}
+.map-pin.is-selected svg {
+  width: 26px;
+  height: 26px;
 }
 .map-me {
   width: 18px;
@@ -1033,7 +1049,7 @@ select.input {
   border: none;
   background: var(--surface);
   box-shadow: var(--shadow-float);
-  color: var(--primary);
+  color: #007aff;
 }
 
 /* ===== Страница события ===== */
@@ -1072,7 +1088,6 @@ select.input {
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
-  font-size: 42px;
 }
 .event-hero-sport {
   font-size: 14px;
@@ -1101,20 +1116,10 @@ select.input {
   display: flex;
   gap: 14px;
   align-items: center;
-  padding: 12px 0;
+  padding: 11px 0;
 }
 .info-row + .info-row {
   border-top: 1px solid var(--border);
-}
-.info-icon {
-  flex: none;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: var(--primary-soft);
-  color: var(--primary);
 }
 .people {
   display: grid;
@@ -1209,6 +1214,9 @@ select.input {
   text-align: center;
 }
 .stat b {
+  display: grid;
+  place-items: center;
+  min-height: 32px;
   font-size: 24px;
   font-weight: 700;
   color: var(--text);
@@ -1235,10 +1243,6 @@ select.input {
   font-size: 13px;
 }
 .settings-row.danger {
-  color: var(--danger);
-}
-.settings-row.danger .info-icon {
-  background: rgba(240, 68, 58, 0.12);
   color: var(--danger);
 }
 .footer-note {
@@ -1283,6 +1287,11 @@ select.input {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.admin-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .admin-row-main .muted {
   font-size: 12px;
@@ -1350,7 +1359,6 @@ select.input {
   display: grid;
   place-items: center;
   border-radius: 32px;
-  font-size: 50px;
   background: rgba(255, 255, 255, 0.08);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
@@ -1469,7 +1477,9 @@ select.input {
   box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.7), inset 0 -10px 24px rgba(108, 21, 30, 0.25),
     0 30px 60px rgba(40, 5, 10, 0.45);
   transform: perspective(600px) rotateX(14deg) rotateZ(-8deg);
-  font-size: 84px;
+}
+.glass-tile > svg {
+  filter: drop-shadow(0 2px 0 rgba(255, 255, 255, 0.5));
 }
 .glass-tile::before {
   content: '';
@@ -1490,7 +1500,6 @@ select.input {
   background: linear-gradient(150deg, #c2323f, #6c151e);
   border: 2px solid rgba(245, 218, 191, 0.6);
   box-shadow: 0 10px 22px rgba(40, 5, 10, 0.5);
-  font-size: 26px;
 }
 .onb-dots {
   display: flex;
@@ -1536,5 +1545,14 @@ select.input {
 @media (prefers-reduced-motion: reduce) {
   .onb-tile {
     animation: none;
+  }
+}
+
+.fab-locate .is-pending {
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
   }
 }

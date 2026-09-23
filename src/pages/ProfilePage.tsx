@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { AboutSection } from '../components/AboutSection';
 import { Avatar } from '../components/Avatar';
 import { EventCard } from '../components/EventCard';
-import { Icon } from '../components/Icon';
+import { Icon, IconTile, TILE } from '../components/Icon';
 import { LoginSheet } from '../components/LoginSheet';
 import { isPast } from '../domain/events';
 import { useEvents } from '../hooks';
@@ -106,18 +106,14 @@ export function ProfilePage() {
         <section className="card settings">
           {user?.role === 'admin' && (
             <Link to="/admin" className="settings-row">
-              <span className="info-icon">
-                <Icon name="shield" size={20} />
-              </span>
+              <IconTile name="shield" color={TILE.indigo} />
               <span className="grow">Модерация событий</span>
-              <Icon name="chevron" size={20} className="muted" />
+              <Icon name="chevron" size={18} weight="bold" className="muted" />
             </Link>
           )}
           {user && user.provider !== 'telegram' && (
             <button className="settings-row danger" onClick={signOut}>
-              <span className="info-icon">
-                <Icon name="logout" size={20} />
-              </span>
+              <IconTile name="logout" color={TILE.red} />
               <span className="grow">Выйти</span>
             </button>
           )}

@@ -5,6 +5,7 @@ import type { AboutMe, Level, SportId } from '../domain/types';
 import { useToast } from '../state';
 import { Icon } from './Icon';
 import { Sheet } from './Sheet';
+import { SportIcon } from './SportIcon';
 
 const EMPTY: AboutMe = { bio: '', sports: [], level: 'any' };
 
@@ -62,7 +63,7 @@ export function AboutSection() {
                 const s = sportMeta(id);
                 return (
                   <span key={id} className="chip-sm">
-                    {s.emoji} {s.label}
+                    <SportIcon sport={id} size={14} color={s.color} /> {s.label}
                   </span>
                 );
               })}
@@ -97,7 +98,8 @@ export function AboutSection() {
                 className={`chip${draft.sports.includes(s.id) ? ' is-on' : ''}`}
                 onClick={() => toggleSport(s.id)}
               >
-                {s.emoji} {s.label}
+                <SportIcon sport={s.id} size={18} color={draft.sports.includes(s.id) ? undefined : s.color} />
+                {s.label}
               </button>
             ))}
           </div>

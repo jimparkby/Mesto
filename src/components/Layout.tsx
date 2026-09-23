@@ -49,10 +49,18 @@ export function Layout() {
               className={({ isActive }) => `tab${t.to === '/create' ? ' tab-create' : ''}${isActive ? ' is-active' : ''}`}
               onClick={() => platform.haptic('selection')}
             >
-              <span className="tab-icon">
-                <Icon name={t.icon} size={t.to === '/create' ? 22 : 24} />
-              </span>
-              <span className="tab-label">{t.label}</span>
+              {({ isActive }) => (
+                <>
+                  <span className="tab-icon">
+                    {t.to === '/create' ? (
+                      <Icon name="plus" size={20} weight="bold" />
+                    ) : (
+                      <Icon name={t.icon} size={24} weight={isActive ? 'fill' : 'regular'} />
+                    )}
+                  </span>
+                  <span className="tab-label">{t.label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>

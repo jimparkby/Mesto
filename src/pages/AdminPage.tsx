@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader';
+import { SportIcon } from '../components/SportIcon';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { formatWhen, isPast } from '../domain/events';
@@ -66,7 +67,7 @@ export function AdminPage() {
           <span>записей</span>
         </div>
         <div className="stat">
-          <b>{stats.bySport[0]?.emoji ?? '—'}</b>
+          <b>{stats.bySport[0] ? <SportIcon sport={stats.bySport[0].id} size={26} color={stats.bySport[0].color} /> : '—'}</b>
           <span>топ-спорт</span>
         </div>
       </div>
@@ -83,8 +84,8 @@ export function AdminPage() {
         {list.map((e) => (
           <div key={e.id} className="card admin-row">
             <Link to={`/event/${e.id}`} className="admin-row-main">
-              <b>
-                {sportMeta(e.sport).emoji} {e.title}
+              <b className="admin-title">
+                <SportIcon sport={e.sport} size={18} color={sportMeta(e.sport).color} /> {e.title}
               </b>
               <span className="muted">
                 {formatWhen(e)} · {e.venueName} · {e.registeredCount}/{e.capacity} · {e.organizerName}

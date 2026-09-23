@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { LoginSheet } from '../components/LoginSheet';
 import { PageHeader } from '../components/PageHeader';
+import { SportIcon } from '../components/SportIcon';
 import { MapView } from '../components/MapView';
 import { LEVELS, SPORTS } from '../domain/sports';
 import type { LatLng, Level, SportId } from '../domain/types';
@@ -72,7 +73,7 @@ export function CreateEventPage() {
         user,
       );
       await refreshMyEvents();
-      toast('Событие опубликовано 🎉', 'success');
+      toast('Событие опубликовано', 'success');
       navigate(`/event/${created.id}`, { replace: true });
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -105,7 +106,8 @@ export function CreateEventPage() {
                 className={`chip${sport === s.id ? ' is-on' : ''}`}
                 onClick={() => setSport(s.id)}
               >
-                {s.emoji} {s.label}
+                <SportIcon sport={s.id} size={18} color={sport === s.id ? undefined : s.color} />
+                {s.label}
               </button>
             ))}
           </div>

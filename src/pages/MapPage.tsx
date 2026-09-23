@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { EventCard } from '../components/EventCard';
 import { FilterBar } from '../components/FilterBar';
+import { Icon } from '../components/Icon';
 import { MapView } from '../components/MapView';
 import { isPast } from '../domain/events';
 import { applyFilters } from '../domain/filters';
@@ -35,7 +36,7 @@ export function MapPage() {
         <FilterBar location={geo.location} onRequestLocation={geo.request} geoPending={geo.status === 'pending'} />
       </div>
       <button className="fab-locate" onClick={geo.request} aria-label="Где я">
-        {geo.status === 'pending' ? '…' : '◎'}
+        <Icon name="near" size={22} className={geo.status === 'pending' ? 'is-pending' : undefined} />
       </button>
       {selected && (
         <div className="map-bottom">
