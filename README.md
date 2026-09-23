@@ -71,7 +71,7 @@ npm run dev          # http://localhost:5173 — демо-режим
 3. Функции и секреты:
    ```bash
    npx supabase secrets set TELEGRAM_BOT_TOKEN=... TG_AUTH_SECRET=<случайная строка> \
-     MINI_APP_URL=https://<user>.github.io/sportMinsk/ TELEGRAM_WEBHOOK_SECRET=<случайная строка>
+     MINI_APP_URL=https://sport-minsk.vercel.app/ TELEGRAM_WEBHOOK_SECRET=<случайная строка>
    npx supabase functions deploy telegram-auth --no-verify-jwt
    npx supabase functions deploy bot --no-verify-jwt
    ```
@@ -79,7 +79,7 @@ npm run dev          # http://localhost:5173 — демо-режим
 
 ## Telegram Mini App
 
-1. Создайте бота в [@BotFather](https://t.me/BotFather), затем `/newapp` — укажите URL фронтенда (GitHub Pages ниже). Получится ссылка `https://t.me/<bot>/<app>` — её в `VITE_TG_APP_LINK`.
+1. Создайте бота в [@BotFather](https://t.me/BotFather), затем `/newapp` — укажите URL фронтенда (Vercel, см. ниже). Получится ссылка `https://t.me/<bot>/<app>` — её в `VITE_TG_APP_LINK`.
 2. `/setmenubutton` — кнопка «СпортРядом» с тем же URL.
 3. Webhook бота:
    ```bash
@@ -90,10 +90,11 @@ npm run dev          # http://localhost:5173 — демо-режим
 
 Ссылка на конкретное событие: `https://t.me/<bot>/<app>?startapp=event_<id>`.
 
-## Хостинг (GitHub Pages)
+## Хостинг (Vercel)
 
-Workflow `.github/workflows/pages.yml` собирает и публикует фронтенд при каждом push в `main`.
-Один раз: **Settings → Pages → Source: GitHub Actions**. Переменные окружения сборки задаются в **Settings → Secrets and variables → Actions → Variables** (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_MAPBOX_TOKEN`, `VITE_TG_APP_LINK`).
+Фронтенд живёт на Vercel: https://sport-minsk.vercel.app/ — проект подключён к репозиторию и
+пересобирается при каждом push в `main`. Переменные окружения сборки (`VITE_SUPABASE_URL`,
+`VITE_SUPABASE_ANON_KEY`, `VITE_MAPBOX_TOKEN`, `VITE_TG_APP_LINK`) задаются в настройках проекта на Vercel.
 
 ## Android APK
 
