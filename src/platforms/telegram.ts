@@ -43,6 +43,13 @@ declare global {
   }
 }
 
+const CLOUD_TIMEOUT_MS = 1500;
+
+/** CloudStorage принимает ключи только из A-Z, a-z, 0-9, _ и -. */
+function cloudKey(key: string): string {
+  return key.replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
 /** Mini App запущен внутри Telegram, если SDK получил initData. */
 export function getTelegramWebApp(): TgWebApp | null {
   const tg = window.Telegram?.WebApp;
@@ -98,11 +105,22 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       else tg.openLink(url);
     },
     // CloudStorage синхронизируется между устройствами пользователя; localStorage — запасной вариант.
+    // Мобильные клиенты иногда не отвечают на запрос — тогда по таймауту берём localStorage.
     storageGet(key) {
       const cs = tg.CloudStorage;
-      if (!cs || !tg.isVersionAtLeast('6.9')) return Promise.resolve(localStorage.getItem(key));
+      const local = () => localStorage.getItem(key);
+      if (!cs || !tg.isVersionAtLeast('6.9')) return Promise.resolve(local());
       return new Promise((resolve) => {
-        cs.getItem(key, (err, value) => resolve(err ? localStorage.getItem(key) : value || null));
+        const timer = setTimeout(() => resolve(local()), CLOUD_TIMEOUT_MS);
+        try {
+          cs.getItem(cloudKey(key), (err, value) => {
+            clearTimeout(timer);
+            resolve(err ? local() : value || local());
+          });
+        } catch {
+          clearTimeout(timer);
+          resolve(local());
+        }
       });
     },
     async storageSet(key, value) {
@@ -110,8 +128,8 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       else localStorage.setItem(key, value);
       const cs = tg.CloudStorage;
       if (!cs || !tg.isVersionAtLeast('6.9')) return;
-      if (value === null) cs.removeItem(key);
-      else cs.setItem(key, value);
+      if (value === null) cs.removeItem(cloudKey(key));
+      else cs.setItem(cloudKey(key), value);
     },
     telegramInitData: () => tg.initData,
     telegramUser: () => tg.initDataUnsafe.user ?? null,
