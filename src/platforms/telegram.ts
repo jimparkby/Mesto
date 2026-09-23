@@ -18,6 +18,7 @@ interface TgWebApp {
   expand(): void;
   isVersionAtLeast(v: string): boolean;
   disableVerticalSwipes?: () => void;
+  requestFullscreen?: () => void;
   setHeaderColor?: (c: string) => void;
   setBackgroundColor?: (c: string) => void;
   setBottomBarColor?: (c: string) => void;
@@ -63,6 +64,10 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       tg.ready();
       tg.expand();
       if (tg.isVersionAtLeast('7.7')) tg.disableVerticalSwipes?.();
+      // На телефонах — во весь экран; на десктопе это развернуло бы всё окно Telegram.
+      if ((tg.platform === 'ios' || tg.platform === 'android') && tg.isVersionAtLeast('8.0')) {
+        tg.requestFullscreen?.();
+      }
       document.documentElement.dataset.platform = 'telegram';
       // Палитра своя, от Telegram берём только светлую/тёмную схему.
       const applyScheme = () => {

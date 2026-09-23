@@ -39,6 +39,16 @@
   color-scheme: light;
 }
 
+/* Полноэкранный Telegram: сверху системная строка и кнопки Telegram поверх контента.
+   SDK отдаёт их высоту в --tg-*-safe-area-inset-*; вне полноэкранного режима там 0. */
+:root[data-platform='telegram'] {
+  --safe-top: calc(
+    max(env(safe-area-inset-top, 0px), var(--tg-safe-area-inset-top, 0px)) +
+      var(--tg-content-safe-area-inset-top, 0px)
+  );
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px));
+}
+
 :root[data-scheme='dark'] {
   --bg: #140a0c;
   --surface: #221114;
