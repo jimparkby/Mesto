@@ -179,7 +179,7 @@ export function EventPage() {
       <LoginSheet
         open={loginOpen}
         onClose={() => setLoginOpen(false)}
-        reason="Чтобы записаться, представьтесь — имя увидит организатор."
+        reason="Войдите, чтобы записаться на событие"
       />
     </div>
   );

@@ -93,6 +93,15 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
     auth: { storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
   });
 
+  /** Вызов telegram-code-auth; текст ошибки берём из ответа функции. */
+  async function codeAuth<T = unknown>(body: Record<string, string>): Promise<T> {
+    const { data, error } = await sb.functions.invoke<T>('telegram-code-auth', { body });
+    if (!error && data) return data;
+    const res = (error as { context?: Response } | null)?.context;
+    const payload = res ? await res.json().catch(() => null) : null;
+    throw new Error(payload?.message ?? 'Не удалось связаться с сервером. Проверьте интернет.');
+  }
+
   async function loadProfile(id: string): Promise<AppUser> {
     const p = check(await sb.from('profiles').select('*').eq('id', id).single<ProfileRow>());
     return toUser(p);
@@ -119,6 +128,21 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
       if (error || !data) throw new Error(error?.message ?? 'Не удалось войти через Telegram');
       const { data: s, error: e2 } = await sb.auth.setSession(data);
       if (e2 || !s.user) throw new Error(e2?.message ?? 'Нет сессии');
+      return loadProfile(s.user.id);
+    },
+
+    async startTelegramLogin() {
+      return codeAuth<{ token: string; bot: string }>({ action: 'start' });
+    },
+
+    async resendTelegramCode(token) {
+      await codeAuth({ action: 'resend', token });
+    },
+
+    async signInWithTelegramCode(token, code) {
+      const tokens = await codeAuth<{ access_token: string; refresh_token: string }>({ action: 'verify', token, code });
+      const { data: s, error } = await sb.auth.setSession(tokens);
+      if (error || !s.user) throw new Error(error?.message ?? 'Нет сессии');
       return loadProfile(s.user.id);
     },
 

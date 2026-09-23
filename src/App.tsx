@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { HashRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { AuthProvider } from './auth/AuthContext';
+import { AuthProvider, useAuth } from './auth/AuthContext';
 import { Layout } from './components/Layout';
+import { LoginSheet } from './components/LoginSheet';
 import { Onboarding } from './components/Onboarding';
 import { AdminPage } from './pages/AdminPage';
 import { CreateEventPage } from './pages/CreateEventPage';
@@ -23,10 +24,19 @@ function StartParamRedirect() {
   return null;
 }
 
+/** Сразу после онбординга в APK и браузере предлагаем войти, как в макете (Walkthrough → Login). */
+function LoginAfterOnboarding() {
+  const { user, loading } = useAuth();
+  const [open, setOpen] = useState(true);
+  if (platform.kind === 'telegram' || loading || user) return null;
+  return <LoginSheet open={open} onClose={() => setOpen(false)} />;
+}
+
 const ONBOARDED_KEY = 'onboarded:v1';
 
 /** Онбординг показываем один раз; по прямой ссылке на событие — сразу к событию. */
 function useOnboarding() {
+  const [justFinished, setJustFinished] = useState(false);
   const [state, setState] = useState<'checking' | 'show' | 'done'>(() =>
     platform.startParam()?.startsWith('event_') ? 'done' : 'checking',
   );
@@ -40,9 +50,10 @@ function useOnboarding() {
   }, []);
   const finish = () => {
     setState('done');
+    setJustFinished(true);
     platform.storageSet(ONBOARDED_KEY, '1').catch(() => {});
   };
-  return { state, finish };
+  return { state, finish, justFinished };
 }
 
 export function App() {
@@ -57,6 +68,7 @@ export function App() {
         <AuthProvider>
           <FiltersProvider>
             <StartParamRedirect />
+            {onboarding.justFinished && <LoginAfterOnboarding />}
             <Routes>
               <Route element={<Layout />}>
                 <Route index element={<HomePage />} />

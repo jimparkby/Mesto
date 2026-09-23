@@ -10,3 +10,6 @@ verify_jwt = false
 
 [functions.telegram-auth]
 verify_jwt = false
+
+[functions.telegram-code-auth]
+verify_jwt = false

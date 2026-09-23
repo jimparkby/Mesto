@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api } from '../api';
+import { api, type TelegramLoginRequest } from '../api';
 import type { AboutMe, AppUser } from '../domain/types';
 import { platform } from '../platforms';
 
@@ -10,6 +10,9 @@ interface AuthState {
   /** id событий, на которые записан текущий пользователь */
   myEventIds: Set<string>;
   signInAsGuest(name: string): Promise<void>;
+  startTelegramLogin(): Promise<TelegramLoginRequest>;
+  resendTelegramCode(token: string): Promise<void>;
+  signInWithTelegramCode(token: string, code: string): Promise<AppUser>;
   signOut(): Promise<void>;
   updateAbout(about: AboutMe): Promise<void>;
   refreshMyEvents(): Promise<void>;
@@ -21,6 +24,7 @@ const AuthCtx = createContext<AuthState | null>(null);
 /**
  * Адаптер авторизации:
  *  - telegram: автоматический вход по Telegram.WebApp.initData (подпись проверяет сервер);
+ *  - telegram-код: вне Telegram (APK, браузер) бот присылает код, его вводят в приложении;
  *  - guest: вход по имени в браузере и APK (в Supabase — анонимный пользователь).
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -66,6 +70,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u);
   }, []);
 
+  const startTelegramLogin = useCallback(() => {
+    setError(null);
+    return api.startTelegramLogin();
+  }, []);
+
+  const resendTelegramCode = useCallback((token: string) => api.resendTelegramCode(token), []);
+
+  const signInWithTelegramCode = useCallback(async (token: string, code: string) => {
+    const u = await api.signInWithTelegramCode(token, code);
+    setUser(u);
+    return u;
+  }, []);
+
   const signOut = useCallback(async () => {
     await api.signOut();
     setUser(null);
@@ -95,8 +112,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AuthState>(
-    () => ({ user, loading, error, myEventIds, signInAsGuest, signOut, updateAbout, refreshMyEvents, toggleRegistration }),
-    [user, loading, error, myEventIds, signInAsGuest, signOut, updateAbout, refreshMyEvents, toggleRegistration],
+    () => ({
+      user,
+      loading,
+      error,
+      myEventIds,
+      signInAsGuest,
+      startTelegramLogin,
+      resendTelegramCode,
+      signInWithTelegramCode,
+      signOut,
+      updateAbout,
+      refreshMyEvents,
+      toggleRegistration,
+    }),
+    [
+      user,
+      loading,
+      error,
+      myEventIds,
+      signInAsGuest,
+      startTelegramLogin,
+      resendTelegramCode,
+      signInWithTelegramCode,
+      signOut,
+      updateAbout,
+      refreshMyEvents,
+      toggleRegistration,
+    ],
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

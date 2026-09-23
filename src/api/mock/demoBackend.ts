@@ -96,6 +96,20 @@ export function createDemoBackend(): Backend {
       return user;
     },
 
+    // В демо бота нет: подходит код 1234.
+    async startTelegramLogin() {
+      return { token: uid('login'), bot: 'SportRyadomBot' };
+    },
+
+    async resendTelegramCode() {},
+
+    async signInWithTelegramCode(_token, code) {
+      if (code !== '1234') throw new Error('Неверный код. В демо-режиме код — 1234.');
+      const user: AppUser = { id: 'tg-demo', name: 'Гость Telegram', role: 'admin', provider: 'telegram' };
+      await persistUser(user);
+      return user;
+    },
+
     async signInAsGuest(name) {
       const user: AppUser = { id: uid('guest'), name, role: 'admin', provider: 'guest' };
       await persistUser(user);

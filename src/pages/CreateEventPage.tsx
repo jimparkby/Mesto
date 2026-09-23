@@ -189,7 +189,7 @@ export function CreateEventPage() {
         </button>
       </form>
 
-      <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} reason="Имя увидят участники вашего события." />
+      <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} reason="Войдите, чтобы создать событие" />
     </div>
   );
 }
