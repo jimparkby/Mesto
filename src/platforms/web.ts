@@ -3,7 +3,7 @@ import type { Platform } from './types';
 export async function webShare(url: string, text: string): Promise<void> {
   if (navigator.share) {
     try {
-      await navigator.share({ title: 'СпортРядом', text, url });
+      await navigator.share({ title: 'Mesto', text, url });
       return;
     } catch {
       // пользователь закрыл диалог — переходим к копированию

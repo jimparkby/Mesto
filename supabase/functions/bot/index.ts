@@ -1,4 +1,4 @@
-// Edge Function: webhook Telegram-бота «СпортРядом».
+// Edge Function: webhook Telegram-бота «Mesto».
 // /start → приветствие и кнопка, открывающая Mini App.
 // /start event_<id> → сразу открывает карточку события.
 // /start login_<token> → код для входа в APK (см. telegram-code-auth).
@@ -80,18 +80,18 @@ Deno.serve(async (req) => {
       chat_id: chatId,
       text: eventParam
         ? 'Открываю событие 👇'
-        : '🏃 <b>СпортРядом</b> — любительские тренировки и игры рядом с тобой в Минске.\n\n' +
+        : '🏃 <b>Mesto</b> — любительские тренировки и игры рядом с тобой в Минске.\n\n' +
           'Футбол, бег, йога, волейбол и многое другое: найди событие на карте, запишись в один клик ' +
           'или создай своё и собери команду.',
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [[{ text: eventParam ? 'Открыть событие' : 'Открыть СпортРядом', web_app: { url: appUrl(eventParam) } }]],
+        inline_keyboard: [[{ text: eventParam ? 'Открыть событие' : 'Открыть Mesto', web_app: { url: appUrl(eventParam) } }]],
       },
     });
   } else if (cmd === '/help') {
     await tg('sendMessage', {
       chat_id: chatId,
-      text: 'Нажми кнопку меню «СпортРядом» внизу чата или отправь /start.',
+      text: 'Нажми кнопку меню «Mesto» внизу чата или отправь /start.',
     });
   }
 

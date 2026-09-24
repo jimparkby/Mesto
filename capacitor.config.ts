@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'by.sportryadom.app',
-  appName: 'СпортРядом',
+  appId: 'by.mesto.app',
+  appName: 'Mesto',
   webDir: 'dist',
   android: {
     backgroundColor: '#0f1115',

@@ -1,4 +1,4 @@
-project_id = "sport-ryadom"
+project_id = "mesto"
 
 [auth]
 # Гостевой вход в браузере и в APK

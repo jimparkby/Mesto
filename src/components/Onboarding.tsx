@@ -100,7 +100,7 @@ export function Onboarding({ onDone }: Props) {
       }}
     >
       <div className="onb-logo">
-        Спорт<b>Рядом</b>
+        Mes<b>to</b>
       </div>
 
       <div className="onb-viewport">

@@ -98,7 +98,7 @@ export function createDemoBackend(): Backend {
 
     // В демо бота нет: подходит код 1234.
     async startTelegramLogin() {
-      return { token: uid('login'), bot: 'SportRyadomBot' };
+      return { token: uid('login'), bot: 'MestoBot' };
     },
 
     async resendTelegramCode() {},

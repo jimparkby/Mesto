@@ -1,4 +1,4 @@
-package by.sportryadom.app;
+package by.mesto.app;
 
 import com.getcapacitor.BridgeActivity;
 

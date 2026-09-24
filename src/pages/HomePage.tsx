@@ -36,7 +36,7 @@ export function HomePage() {
 
   return (
     <div className="page">
-      <PageHeader eyebrow="Спорт рядом · Минск" title={user ? `Привет, ${user.name.split(' ')[0]}!` : 'СпортРядом'}>
+      <PageHeader eyebrow="Mesto · Минск" title={user ? `Привет, ${user.name.split(' ')[0]}!` : 'Mesto'}>
         {api.mode === 'demo' && <span className="badge badge-muted" title="Данные хранятся на устройстве">демо-режим</span>}
       </PageHeader>
 

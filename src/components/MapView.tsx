@@ -37,7 +37,7 @@ function isDark(): boolean {
 }
 
 /**
- * Фирменный вид карты «СпортРядом» поверх Mapbox Standard (без Mapbox Studio — всё в коде):
+ * Фирменный вид карты «Mesto» поверх Mapbox Standard (без Mapbox Studio — всё в коде):
  * парки и зелёные зоны подсвечены (там проходит большинство тренировок), лишние POI и транспорт
  * приглушены, чтобы метки событий читались лучше.
  * https://docs.mapbox.com/map-styles/standard/api/

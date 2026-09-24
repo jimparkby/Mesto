@@ -120,7 +120,7 @@ export function ProfilePage() {
         </section>
       )}
 
-      <p className="footer-note">СпортРядом · MVP для Space University 2026</p>
+      <p className="footer-note">Mesto · MVP для Space University 2026</p>
 
       <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>

@@ -34,7 +34,7 @@ export function createNativePlatform(): Platform {
       // Для MVP без @capacitor/haptics — достаточно визуального отклика.
     },
     async share(url, text) {
-      await Share.share({ title: 'СпортРядом', text, url, dialogTitle: 'Поделиться событием' });
+      await Share.share({ title: 'Mesto', text, url, dialogTitle: 'Поделиться событием' });
     },
     openLink(url) {
       window.open(url, '_system');

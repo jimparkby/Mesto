@@ -92,7 +92,7 @@ export async function sendLoginCode(chatId: number, code: string) {
   return tgApi('sendMessage', {
     chat_id: chatId,
     text:
-      `Ваш код для входа в СпортРядом: <b>${code}</b>\n\n` +
+      `Ваш код для входа в Mesto: <b>${code}</b>\n\n` +
       'Введите его в приложении. Код действует 5 минут.\n' +
       'Никому его не сообщайте. Если вы не входили в приложение, просто проигнорируйте это сообщение.',
     parse_mode: 'HTML',

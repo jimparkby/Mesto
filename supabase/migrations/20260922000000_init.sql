@@ -1,4 +1,4 @@
--- СпортРядом: базовая схема MVP
+-- Mesto: базовая схема MVP
 -- profiles ← auth.users, events, registrations + RLS
 
 create extension if not exists pgcrypto;
