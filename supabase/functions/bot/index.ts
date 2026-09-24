@@ -16,7 +16,7 @@ import {
   type TgUser,
 } from '../_shared/telegram.ts';
 
-const MINI_APP_URL = Deno.env.get('MINI_APP_URL')!;
+const MINI_APP_URL = Deno.env.get('MINI_APP_URL')!.trim();
 const WEBHOOK_SECRET = Deno.env.get('TELEGRAM_WEBHOOK_SECRET');
 
 function appUrl(startParam?: string) {
