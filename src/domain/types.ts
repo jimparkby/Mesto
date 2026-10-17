@@ -34,6 +34,8 @@ export interface SportEvent {
   organizerName: string;
   status: EventStatus;
   createdAt: string;
+  /** Ссылка на исходный анонс, если событие импортировано из Telegram/Instagram/сайта. */
+  sourceUrl?: string | null;
 }
 
 export type NewEventInput = Pick<

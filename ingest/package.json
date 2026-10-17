@@ -1,0 +1,23 @@
+{
+  "name": "mesto-ingest",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Локальный запуск и тесты импорта событий (сам код — supabase/functions/ingest)",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dry": "node --env-file-if-exists=.env cli.ts --dry-run",
+    "once": "node --env-file-if-exists=.env cli.ts",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "5.9"
+  }
+}

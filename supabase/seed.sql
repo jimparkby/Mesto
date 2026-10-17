@@ -17,7 +17,7 @@ from unnest(array[
 ]) with ordinality as t(name, n);
 
 -- ---------- События ----------
-delete from public.events where organizer_id is null;
+delete from public.events where organizer_id is null and source is null;
 
 drop table if exists demo_events;
 create temporary table demo_events as

@@ -22,6 +22,7 @@ interface EventRow {
   organizer_name: string;
   status: SportEvent['status'];
   created_at: string;
+  source_url: string | null;
 }
 
 interface ProfileRow {
@@ -56,6 +57,7 @@ function toEvent(r: EventRow): SportEvent {
     organizerName: r.organizer_name,
     status: r.status,
     createdAt: r.created_at,
+    sourceUrl: r.source_url,
   };
 }
 

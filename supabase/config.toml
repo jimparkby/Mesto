@@ -13,3 +13,7 @@ verify_jwt = false
 
 [functions.telegram-code-auth]
 verify_jwt = false
+
+# Вызывается pg_cron (см. миграцию *_ingest_cron.sql), защищена заголовком x-ingest-secret.
+[functions.ingest]
+verify_jwt = false

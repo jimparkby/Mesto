@@ -132,6 +132,13 @@ export function EventPage() {
         <InfoRow icon="organizer" color={TILE.orange}>
           Организатор: <b>{event.organizerName || '—'}</b>
           {isOrganizer && <span className="badge badge-ok"> это вы</span>}
+          {event.sourceUrl && (
+            <div>
+              <button type="button" className="link" onClick={() => platform.openLink(event.sourceUrl!)}>
+                Исходный анонс
+              </button>
+            </div>
+          )}
         </InfoRow>
       </div>
 
