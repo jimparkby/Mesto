@@ -5,7 +5,7 @@
 // Вызов защищён секретом из Vault: pg_cron передаёт его в заголовке x-ingest-secret,
 // функция сверяет через rpc ingest_secret_matches (доступна только service role).
 // Необязательные настройки: TG_CHANNELS, PROBEG_CITY_IDS, INGEST_PAGES, INGEST_MAX_POST_AGE_DAYS,
-// INGEST_DEFAULT_CAPACITY, INGEST_EVENT_STATUS — см. config.ts.
+// INGEST_EVENT_STATUS — см. config.ts.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { config } from './config.ts';

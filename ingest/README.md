@@ -50,7 +50,7 @@ npx esbuild supabase/functions/ingest/index.ts --bundle --format=esm --platform=
 ```
 
 Настройки — переменные окружения функции (Edge Functions → Secrets), все необязательные:
-`TG_CHANNELS`, `PROBEG_CITY_IDS`, `INGEST_PAGES`, `INGEST_MAX_POST_AGE_DAYS`, `INGEST_DEFAULT_CAPACITY`,
+`TG_CHANNELS`, `PROBEG_CITY_IDS`, `INGEST_PAGES`, `INGEST_MAX_POST_AGE_DAYS`,
 `INGEST_EVENT_STATUS` — см. `config.ts` и `.env.example`.
 
 ## Группы

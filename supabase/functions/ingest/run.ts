@@ -8,7 +8,7 @@ import { geocode, type GeoSearch } from './geocode.ts';
 import { listProbegCity, loadProbegEvent } from './sources/probeg.ts';
 import { fetchTelegramChannel } from './sources/telegram.ts';
 import type { EventRow, Store } from './store.ts';
-import type { ExtractedEvent, SourcePost } from './types.ts';
+import type { ExtractedEvent, SourcePost, SportId } from './types.ts';
 
 const MINSK_OFFSET = '+03:00'; // в Беларуси нет перехода на летнее время
 
@@ -32,6 +32,15 @@ export interface RunSummary {
   errors: number;
   log: string[];
 }
+
+/**
+ * Вместимость, если в анонсе нет числа мест («есть места», забег без лимита): примерный размер одной игры
+ * или группы. В ленте это «0 из 12», а не «0 из 100» на волейболе.
+ */
+const DEFAULT_CAPACITY: Record<SportId, number> = {
+  volleyball: 12, football: 14, basketball: 10, tennis: 4, hockey: 20, yoga: 20, workout: 20,
+  swimming: 20, cycling: 30, running: 100, other: 20,
+};
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.round(n)));
@@ -63,7 +72,7 @@ async function toRow(post: SourcePost, e: ExtractedEvent, index: number, geoSear
     lng: point.lng,
     level: e.level,
     price: Math.max(0, e.price_byn ?? 0),
-    capacity: clamp(e.capacity ?? config.defaultCapacity, 1, 1000),
+    capacity: clamp(e.capacity ?? DEFAULT_CAPACITY[e.sport], 1, 1000),
     organizer_name: (e.organizer.trim() || post.sourceName).slice(0, 120),
     status: e.confident ? config.eventStatus : 'hidden',
     source: post.source,

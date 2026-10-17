@@ -59,8 +59,6 @@ export const config = {
   pagesPerChannel: num(env('INGEST_PAGES'), 2),
   /** Посты старше этого возраста не разбираем. */
   maxPostAgeDays: num(env('INGEST_MAX_POST_AGE_DAYS'), 21),
-  /** Вместимость, если в анонсе она не указана. */
-  defaultCapacity: num(env('INGEST_DEFAULT_CAPACITY'), 100),
   /** 'published' — сразу в ленту, 'hidden' — сначала на модерацию в админке. */
   eventStatus: env('INGEST_EVENT_STATUS') === 'hidden' ? 'hidden' : 'published',
 };
