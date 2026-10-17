@@ -7,7 +7,8 @@
 //  3. В каждом сегменте ищем дату, время (или диапазон «20.00—21.30»), место, цену, число мест, уровень.
 //
 // Всё, что распознано не уверенно (дата по дню недели, вид спорта «другое»), помечается confident: false —
-// такие события попадают в ленту скрытыми, их одобряет админ.
+// такие события попадают в ленту скрытыми, их одобряет админ. В тематических каналах и чатах («волейбол
+// в Минске») день недели — обычный способ писать дату, там он считается уверенным.
 
 import { KNOWN_PLACES } from './places.ts';
 import type { ExtractedEvent, Level, SportId, SourcePost } from './types.ts';
@@ -60,6 +61,15 @@ const STRONG_INVITE = re(
   `${B}(приглаша|регистрац|зарегистр|записаться|запись открыта|присоединя|приходи|открыт\\p{L}* тренировк|ждём вас|ждем вас)`,
   'iu',
 );
+/** «КОМПЛЕКТ», «мест нет» — набор закрыт, звать некого. */
+const FULL = re(`${B}(комплект|набор закрыт|мест нет|нет мест|0 мест)${E}`, 'iu');
+/** «Ищу, где поиграть» — человек ищет игру, а не зовёт на неё (если только тут же не «есть 2 места»). */
+const SEEKING = re(`${B}(ищу|ищем)${E}`, 'iu');
+const NUMBER_WORD = '(\\d{1,2}|одно|один|одна|два|две|пару|пара|три|четыре|пять|шесть|несколько)';
+const OFFERING = re(
+  `${B}(?:есть|осталось|остались|нужно|нужен|нужны|набираем)\\s+(?:ещё\\s+|еще\\s+)?${NUMBER_WORD}?\\s*(?:мест|человек|игрок|девуш|парн)`,
+  'iu',
+);
 /** «Билеты на матч» — зрелище, а не участие. */
 const SPECTATOR = re(`${B}(билет)`, 'iu');
 const MATCH = re(`${B}(матч|чемпионат|плей-офф|кубок)`, 'iu');
@@ -94,11 +104,20 @@ const RE_DATE_NUM = re(`${B}(\\d{1,2})\\.(\\d{1,2})(?:\\.(\\d{4}|\\d{2}))?(?![\\
 const RE_DATE_WORD = re(`${B}(\\d{1,2})(?:-?го)?\\s+${MONTH_NAME}(?:\\s+(\\d{4}))?${E}`);
 const RE_WEEKDAY = re(`${B}${WEEKDAY_NAME}${E}`);
 const RE_RELATIVE = re(`${B}(сегодня|завтра|послезавтра)${E}`);
-const RE_TIME_RANGE = re(`(?<![\\d.])(\\d{1,2})[:.](\\d{2})\\s*(?:-|–|—|до)\\s*(\\d{1,2})[:.,](\\d{2})(?![\\d.])`);
+const RE_TIME_RANGE = re(`(?<![\\d.])(\\d{1,2})[:.](\\d{2})\\s*(?:-|–|—|до)\\s*(\\d{1,2})[:.,](\\d{2})(?!\\d|\\.\\d)`);
 const RE_TIME = re(`(?<![\\d.])(\\d{1,2}):(\\d{2})(?![\\d])`);
 // «в 19.00» — точка вместо двоеточия только после «в/с/к» и с «круглыми» минутами, иначе это дата
-const RE_TIME_DOT = re(`${B}(?:в|с|к)\\s+(\\d{1,2})\\.(00|15|30|45)(?![\\d.])`);
+const RE_TIME_DOT = re(`${B}(?:в|с|к)\\s+(\\d{1,2})\\.(00|15|30|45)(?!\\d|\\.\\d)`);
 const RE_TIME_HOURS = re(`${B}в\\s+(\\d{1,2})\\s*(?:ч|час|часов|утра|вечера)${E}`);
+// Как пишут в чатах: «21-23:00» (начало без минут), «с 19 до 21», «время: 19-21», «Начало 19.30»,
+// «в 18-45» (дефис вместо двоеточия), «15.00» отдельной строкой.
+const RE_TIME_RANGE_H = re(`(?<![\\d.:,])(\\d{1,2})\\s*(?:-|–|—)\\s*(\\d{1,2})[:.](\\d{2})(?!\\d|\\.\\d)`);
+const RE_TIME_FROM_TO = re(
+  `${B}(?:с|время:?)\\s+(\\d{1,2})(?:[:.](\\d{2}))?\\s*(?:до|-|–|—)\\s*(\\d{1,2})(?:[:.](\\d{2}))?(?![\\d.:])`,
+);
+const RE_TIME_PREFIXED = re(`${B}(?:начало|старт|время|сбор)\\s*(?:в\\s*)?:?\\s*(\\d{1,2})[.:](\\d{2})(?!\\d|\\.\\d)`);
+const RE_TIME_DASH = re(`(?<![\\d.:])(\\d{1,2})-([2-5]\\d)(?![\\d.:])`);
+const RE_TIME_LINE = re(`(?:^|\\n)\\s*(\\d{1,2})\\.(\\d{2})\\s*(?=\\n|$)`);
 
 interface LocalDate { y: number; m: number; d: number }
 interface DateHit { date: LocalDate; byWeekday: boolean }
@@ -122,7 +141,11 @@ function validDate(y: number, m: number, d: number): boolean {
   return t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
 }
 
-/** Дата без года — ближайшая к дате поста (анонсы в прошлое не пишут, но «вчера был» бывает). */
+/**
+ * Дата без года — ближайшая к дате поста. Прошлое на неделю — «вчера было» (событие отсеется как прошедшее);
+ * на 1–2 месяца назад — скорее опечатка («Суббота 10.09» в октябре): такую дату не берём, сработает день недели;
+ * ещё раньше — это уже следующий год (в декабре пишут про январь).
+ */
 function withYear(base: LocalDate, m: number, d: number, y?: number): LocalDate | null {
   if (y) {
     if (y < 100) y += 2000;
@@ -130,12 +153,15 @@ function withYear(base: LocalDate, m: number, d: number, y?: number): LocalDate 
   }
   if (!validDate(base.y, m, d) && !validDate(base.y + 1, m, d)) return null;
   const sameYear = { y: base.y, m, d };
-  return dayNumber(sameYear) >= dayNumber(base) - 7 ? sameYear : { y: base.y + 1, m, d };
+  const ago = dayNumber(base) - dayNumber(sameYear);
+  if (ago <= 7) return sameYear;
+  if (ago <= 62) return null;
+  return { y: base.y + 1, m, d };
 }
 
 function findDate(text: string, base: LocalDate): DateHit | null {
   // Время-диапазоны вида 20.00—21.30 похожи на даты — убираем их перед поиском.
-  const clean = text.replace(RE_TIME_RANGE, ' ').replace(RE_TIME_DOT, ' ');
+  const clean = text.replace(RE_TIME_RANGE, ' ').replace(RE_TIME_DOT, ' ').replace(RE_TIME_PREFIXED, ' ');
 
   for (const m of clean.matchAll(RE_DATE_NUM)) {
     const date = withYear(base, Number(m[2]), Number(m[1]), m[3] ? Number(m[3]) : undefined);
@@ -165,16 +191,28 @@ function hasDate(line: string, base: LocalDate): boolean {
 
 function findTime(text: string): { h: number; min: number; durationMin: number | null } | null {
   const ok = (h: number, min: number) => h >= 5 && h <= 23 && min < 60; // ночных тренировок не бывает
+  const span = (h1: number, m1: number, h2: number, m2: number) => {
+    const d = h2 * 60 + m2 - (h1 * 60 + m1);
+    return { h: h1, min: m1, durationMin: d > 0 ? d : null };
+  };
   const range = [...text.matchAll(RE_TIME_RANGE)].find((m) => ok(+m[1], +m[2]));
-  if (range) {
-    const start = +range[1] * 60 + +range[2];
-    const end = +range[3] * 60 + +range[4];
-    return { h: +range[1], min: +range[2], durationMin: end > start ? end - start : null };
-  }
-  for (const pattern of [RE_TIME, RE_TIME_DOT]) {
+  if (range) return span(+range[1], +range[2], +range[3], +range[4]);
+  const rangeH = [...text.matchAll(RE_TIME_RANGE_H)].find((m) => ok(+m[1], 0) && +m[2] > +m[1]);
+  if (rangeH) return span(+rangeH[1], 0, +rangeH[2], +rangeH[3]);
+  const fromTo = [...text.matchAll(RE_TIME_FROM_TO)].find((m) => ok(+m[1], +(m[2] ?? 0)) && +m[3] > +m[1]);
+  if (fromTo) return span(+fromTo[1], +(fromTo[2] ?? 0), +fromTo[3], +(fromTo[4] ?? 0));
+  for (const pattern of [RE_TIME_PREFIXED, RE_TIME]) {
     const m = [...text.matchAll(pattern)].find((x) => ok(+x[1], +x[2]));
     if (m) return { h: +m[1], min: +m[2], durationMin: null };
   }
+  // «18-45»: вторая половина больше 23 — значит, это минуты, а не конец диапазона часов
+  const dash = [...text.matchAll(RE_TIME_DASH)].find((x) => ok(+x[1], +x[2]) && +x[2] > 23);
+  if (dash) return { h: +dash[1], min: +dash[2], durationMin: null };
+  const dot = [...text.matchAll(RE_TIME_DOT)].find((x) => ok(+x[1], +x[2]));
+  if (dot) return { h: +dot[1], min: +dot[2], durationMin: null };
+  // «15.00» строкой: не путаем с датой «17.10» — минуты «круглые» или месяц невозможен
+  const line = [...text.matchAll(RE_TIME_LINE)].find((x) => ok(+x[1], +x[2]) && (+x[2] % 15 === 0 || +x[2] > 12));
+  if (line) return { h: +line[1], min: +line[2], durationMin: null };
   const hours = [...text.matchAll(RE_TIME_HOURS)].find((x) => ok(+x[1], 0));
   if (hours) {
     let h = +hours[1];
@@ -197,8 +235,38 @@ function findDuration(text: string): number | null {
 const RE_VENUE_LINE = re(`^\\s*(?:📍|🗺|🏟|📌)?\\s*(?:место|где|адрес|локация|сбор|точка сбора|старт)\\s*[:—-]\\s*(.+)$`, 'imu');
 const RE_PIN_LINE = re(`^\\s*(?:📍|🗺|🏟|📌)\\s*(.+)$`, 'mu');
 const RE_ADDRESS = re(
-  `${B}((?:ул\\.?|улица|пр-т|пр-кт|проспект|пр\\.|пер\\.?|переулок|бульвар|б-р|тракт|наб\\.?|набережная)\\s+[\\p{L}\\d .-]{2,40}?,?\\s*(?:д\\.\\s*)?\\d+[а-яА-Я]?(?:\\/\\d+)?)`,
+  `${B}((?:ул\\.|ул\\s|улица\\s|пр-т|пр-кт|проспект\\s|пр\\.|пер\\.|переулок\\s|бульвар\\s|б-р|тракт\\s|наб\\.|набережная\\s)\\s*[\\p{L}\\d .-]{2,40}?,?\\s*(?:д\\.\\s*)?\\d+[а-яА-Я]?(?:\\/\\d+)?)`,
   'iu',
+);
+/**
+ * Адрес без «ул.», как пишут в чатах: «Филимонова 55/1», «Чкалова 3а», «Щербакова23», «Кальварийской, 18».
+ * Слово перед номером не должно быть обычным словом («Игра 4/2», «Есть 2 места», «Воскресенье 18.10»).
+ */
+const RE_BARE_ADDRESS = re(
+  `(?<![\\p{L}\\d-])([А-ЯЁа-яё][а-яё]{3,})[ \\t]*,?[ \\t]*(\\d{1,3}(?:[ \\t]?(?![рР])[а-яА-Я](?!\\p{L}))?(?:\\/\\d{1,2})?(?:[ \\t]?к[ \\t]?\\d{1,2})?)` +
+    `(?![\\d.:,]\\d|\\d|\\s*(?:р${E}|руб|byn|мест|мин|час|лет|чел|игрок|команд|км|м${E}|шт|\\+|-|–|—|:|%|\\/\\d))`,
+  'giu',
+);
+const NOT_STREET = new Set((
+  'есть игра играем играть цена стоимость место места мест уровень возраст всего нужно нужен нужны человек ' +
+  'осталось остались сегодня завтра школа школы микс связку команды тренировка время начало бесплатно около ' +
+  'после группа корпус корпуса игры игру дивизион понедельник вторник среда среду четверг пятница пятницу ' +
+  'суббота субботу воскресенье января февраля марта апреля мая июня июля августа сентября октября ноября декабря ' +
+  'минск минске двух трех трёх лет года числа набираем примерно около всем привет зала залов кортов корт часа ' +
+  'часов минут человека площадка площадке поле этаж этаже вход подъезд'
+).split(' '));
+
+function findBareAddress(text: string): string | null {
+  for (const m of text.matchAll(RE_BARE_ADDRESS)) {
+    if (!NOT_STREET.has(m[1].toLowerCase())) return `${m[1]} ${m[2].replace(/\s+/g, '')}`;
+  }
+  return null;
+}
+
+/** Название зала рядом с адресом: «ФОК Атлант», «РГУОР», «СШ-153», «105 школа», «ДК Железнодорожников». */
+const RE_VENUE_HINT = re(
+  `${B}(ФОК\\s+[«"]?[\\p{L}-]+[»"]?|ФОЦ\\s+[\\p{L}.]+(?:\\s+[\\p{L}.]+)?|РГУОР|РУЦ\\s+[«"]?[\\p{L}-]+[»"]?|БГУИР|БГПУ|БНТУ|БГУФК|ДК\\s+[«"]?[\\p{L}-]+[»"]?|СШ[-\\s№]*\\d+|\\d+\\s*(?:сш|школа)|школ\\p{L}*\\s*№?\\s*\\d+)`,
+  'u',
 );
 
 interface Venue { venueName: string; address: string; lat?: number; lng?: number }
@@ -212,19 +280,34 @@ function findVenue(text: string): Venue | null {
       return { venueName: place.name, address: address || place.address, lat: place.lat, lng: place.lng };
     }
   }
-  const line = (text.match(RE_VENUE_LINE)?.[1] ?? text.match(RE_PIN_LINE)?.[1])?.trim();
+  const line = (text.match(RE_VENUE_LINE)?.[1] ?? text.match(RE_PIN_LINE)?.[1])?.trim().replace(/^Минск\s*,\s*/iu, '');
   if (line) {
-    const venueName = line.replace(RE_ADDRESS, '').replace(/[,.;\s]+$/, '').replace(/^[,.;\s]+/, '').slice(0, 80);
+    const venueName = line.replace(RE_ADDRESS, '').replace(/\(\s*\)/g, '').replace(/[,.;\s–—-]+$/, '').replace(/^[,.;\s–—-]+/, '').slice(0, 80);
     return { venueName: venueName || line.slice(0, 80), address: address || (venueName ? '' : line) };
   }
   if (address) {
     // «19.10 пн 20.30—22.00 ФОЦ Машерова, пр-т Победителей, 23» → название — то, что перед адресом.
     const addrLine = text.split('\n').find((l) => l.includes(address)) ?? '';
-    const before = stripWhen(addrLine.slice(0, addrLine.indexOf(address))).replace(/^[\s,.:;—–-]+|[\s,.:;—–-]+$/g, '');
-    return { venueName: before.length >= 3 ? before.slice(0, 80) : address, address };
+    const before = venueLabel(stripWhen(addrLine.slice(0, addrLine.indexOf(address))));
+    return { venueName: before ?? address, address };
   }
+  const bare = findBareAddress(text);
+  if (bare) return { venueName: text.match(RE_VENUE_HINT)?.[1] ?? bare, address: bare };
   return null;
 }
+
+/** Текст перед адресом годится в название места, только если это короткое название, а не фраза. */
+function venueLabel(raw: string): string | null {
+  const t = raw
+    .replace(/\(\s*\)/g, '')
+    .replace(re(`${B}(?:адрес|место|где)\\s*:?\\s*$`, 'iu'), '')
+    .replace(/^[\s,.:;—–-]+|[\s,.:;—–-]+$/g, '');
+  if (t.length < 3 || t.split(/\s+/).length > 5 || /[()!?]/.test(t) || CHATTER.test(t) || GREETING.test(t)) return null;
+  return t.slice(0, 80);
+}
+
+/** Слова из разговорной части поста — такой кусок не может быть названием места. */
+const CHATTER = re(`${B}(мест|есть|нужн|привет|сегодня|завтра|играем|приходи|пишите|ищу|ищем)`, 'iu');
 
 /**
  * Последний шанс: «05 июня, ФОЦ им Машерова, Победителей 23. 20.30—22,00 по 12р» — место пишут прямо
@@ -238,7 +321,7 @@ function venueFromDateLine(line: string): Venue | null {
     .replace(/\(([^)]*)\)/g, ', $1')
     .split(/[,.;]\s*/)
     .map((p) => p.trim())
-    .filter((p) => p.length >= 3 && /\p{L}{3}/u.test(p) && !/^(зал|улица|на улице)$/iu.test(p));
+    .filter((p) => p.length >= 3 && /\p{L}{3}/u.test(p) && !/^(зал|улица|на улице)$/iu.test(p) && !GREETING.test(p) && !CHATTER.test(p));
   if (rest.length === 0 || rest[0].split(/\s+/).length > 6) return null;
   // «ФОЦ им Машерова» + «Победителей 23» (адрес без «ул.»)
   const address = rest.find((p, i) => i > 0 && /\d/.test(p)) ?? '';
@@ -248,7 +331,8 @@ function venueFromDateLine(line: string): Venue | null {
 /** Убрать из строки даты, время и дни недели. */
 function stripWhen(s: string): string {
   return s
-    .replace(RE_TIME_RANGE, '').replace(RE_TIME, '').replace(RE_TIME_DOT, '')
+    .replace(RE_TIME_RANGE, '').replace(RE_TIME_RANGE_H, '').replace(RE_TIME_FROM_TO, '').replace(RE_TIME_PREFIXED, '')
+    .replace(RE_TIME, '').replace(RE_TIME_DOT, '')
     .replace(RE_DATE_NUM, '').replace(RE_DATE_WORD, '').replace(RE_WEEKDAY, '').replace(RE_RELATIVE, '')
     .replace(/\s{2,}/g, ' ');
 }
@@ -261,11 +345,36 @@ function findPrice(text: string): number | null {
   return m ? Number(m[1].replace(',', '.')) : null;
 }
 
+const NUMBERS: Record<string, number> = {
+  одно: 1, один: 1, одна: 1, два: 2, две: 2, пару: 2, пара: 2, три: 3, четыре: 4, пять: 5, шесть: 6,
+};
+
 function findCapacity(text: string): number | null {
   const m =
     text.match(re(`${B}(?:до|лимит|максимум|всего)\\s*(\\d{1,4})\\s*(?:человек|чел|участник|мест|игрок)`, 'iu')) ??
     text.match(re(`${B}(?:мест[ао]?|лимит)\\s*[:—-]?\\s*(\\d{1,4})`, 'iu'));
-  return m ? Number(m[1]) : null;
+  if (m) return Number(m[1]);
+  // «есть 2 места», «Одно место в связку», «нужно два человека» — свободные места и есть вместимость для записи
+  const free = text.match(
+    re(`${B}(?:(?:есть|осталось|остались|нужно|нужен|нужны|набираем)\\s+(?:ещё\\s+|еще\\s+)?)?(\\d{1,2}|одно|один|одна|два|две|пару|пара|три|четыре|пять|шесть)\\s+(?:свободн\\p{L}*\\s+)?(?:мест|человек|чел${E}|игрок)`, 'iu'),
+  );
+  if (!free) return null;
+  return NUMBERS[free[1].toLowerCase()] ?? (Number(free[1]) || null);
+}
+
+/** Волейбольные уровни: «Д4», «д3-д4», «Д-4-Д-3» (Д1 — сильнейший). */
+const RE_VB_LEVEL = re(`(?<![\\p{L}\\d])[дД]\\s?-?([1-5])(?:\\s*(?:-|–|—|,|\\/)\\s*[дД]?\\s?-?([1-5]))?(?!\\d)`, 'u');
+
+function volleyballLevel(text: string): { tag: string; level: Level } | null {
+  const m = text.match(RE_VB_LEVEL);
+  if (!m) return null;
+  const a = Number(m[1]);
+  const b = m[2] ? Number(m[2]) : a;
+  const [lo, hi] = [Math.min(a, b), Math.max(a, b)];
+  return {
+    tag: lo === hi ? `Д${lo}` : `Д${lo}–Д${hi}`,
+    level: lo <= 2 ? 'advanced' : lo <= 4 ? 'intermediate' : 'beginner',
+  };
 }
 
 function findLevel(text: string): Level {
@@ -283,7 +392,17 @@ const SPORT_LABEL: Record<SportId, string> = {
   hockey: 'Хоккей', other: 'Тренировка',
 };
 
-const GREETING = re(`^(друзья|доброе|добрый|привет|всем привет|ура|напоминаем|внимание|у нас отличные новости)`, 'iu');
+const GREETING = re(`^(друзья|доброе|добрый|привет|всем привет|здравствуйте|ура|напоминаем|внимание|у нас отличные новости)`, 'iu');
+
+/** Обёртки ботов-репостеров: «Новое объявление в ВК:», подвал «Автор:/Ссылка:/Теги:», «[#alias|t.me/x|t.me/x]». */
+function cleanText(text: string): string {
+  return text
+    .replace(/^\s*Новое объявление(?: в ВК)?:\s*$/gimu, '')
+    .replace(/^\s*(?:Автор|Ссылка|Теги):.*$/gimu, '')
+    .replace(/\[#alias\|([^|\]]+)\|[^\]]*\]/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
 /**
  * Заголовок — первая осмысленная фраза из первых строк поста (без эмодзи, хэштегов, дат, ссылок).
@@ -322,13 +441,15 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export type ExtractResult = { events: ExtractedEvent[]; reason: string | null };
 
 export function extractEvents(post: SourcePost): ExtractResult {
-  const text = post.text;
+  const text = cleanText(post.text);
   // В тематическом канале вид спорта подразумевается, и «приходите» тоже: там каждый пост — про игру.
   const themed = post.defaultSport !== undefined;
   const sport = detectSport(text) ?? (themed ? { sport: post.defaultSport!, score: 1 } : null);
   if (!sport) return { events: [], reason: 'не про спорт' };
   if (NEGATIVE.test(text) && sport.score < 2) return { events: [], reason: 'культурное событие' };
   if (SPECTATOR.test(text) && MATCH.test(text)) return { events: [], reason: 'зрелищный матч' };
+  if (FULL.test(text)) return { events: [], reason: 'набор закрыт' };
+  if (SEEKING.test(text) && !OFFERING.test(text)) return { events: [], reason: 'ищут игру, а не зовут' };
   if (CANCEL.test(text)) return { events: [], reason: 'отмена или перенос' };
   if (RAFFLE.test(text.slice(0, 250))) return { events: [], reason: 'розыгрыш' };
   if (SCHEDULE_RELEASE.test(text)) return { events: [], reason: 'анонс публикации расписания' };
@@ -372,10 +493,12 @@ export function extractEvents(post: SourcePost): ExtractResult {
 
     const segSport = segments.length > 1 ? detectSport(segText) ?? sport : sport;
     const { y, m, d } = dateHit.date;
+    const vb = segSport.sport === 'volleyball' ? volleyballLevel(both) : null;
     events.push({
-      // В расписании у всех строк общий заголовок — различаем события по месту.
-      title: segments.length > 1
-        ? `${SPORT_LABEL[segSport.sport]} — ${venue.venueName}`.slice(0, 120)
+      // В расписании у всех строк общий заголовок, а в чатах заголовков нет вовсе («Всем привет, есть место…») —
+      // там событие называем по виду спорта, уровню и месту.
+      title: segments.length > 1 || themed
+        ? `${SPORT_LABEL[segSport.sport]}${vb ? `, ${vb.tag}` : ''} — ${venue.venueName}`.slice(0, 120)
         : makeTitle([...header, ...seg], segSport.sport, venue.venueName),
       sport: segSport.sport,
       description: text.length > 1500 ? `${text.slice(0, 1500).trimEnd()}…` : text,
@@ -385,11 +508,11 @@ export function extractEvents(post: SourcePost): ExtractResult {
       address: venue.address,
       lat: venue.lat,
       lng: venue.lng,
-      level: findLevel(both) === 'any' ? findLevel(text) : findLevel(both),
+      level: vb?.level ?? (findLevel(both) === 'any' ? findLevel(text) : findLevel(both)),
       price_byn: findPrice(both) ?? findPrice(text),
       capacity: findCapacity(both) ?? findCapacity(text),
       organizer: '',
-      confident: !dateHit.byWeekday && segSport.sport !== 'other',
+      confident: (themed || !dateHit.byWeekday) && segSport.sport !== 'other',
     });
   }
 

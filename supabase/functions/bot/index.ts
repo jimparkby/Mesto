@@ -3,6 +3,8 @@
 // /start event_<id> → сразу открывает карточку события.
 // /start login_<token> → код для входа в APK (см. telegram-code-auth).
 //
+// Сообщения из групп-источников (INGEST_GROUPS, см. ingest/config.ts) → импорт событий в ленту.
+//
 // Секреты: TELEGRAM_BOT_TOKEN, MINI_APP_URL (https-адрес собранного фронтенда),
 //          TELEGRAM_WEBHOOK_SECRET (тот же, что передан в setWebhook secret_token).
 
@@ -15,6 +17,12 @@ import {
   tgApi as tg,
   type TgUser,
 } from '../_shared/telegram.ts';
+import { config as ingestConfig } from '../ingest/config.ts';
+import { extractEvents } from '../ingest/extract.ts';
+import { dbSearch } from '../ingest/geocode.ts';
+import { ingestPosts } from '../ingest/run.ts';
+import { createStore } from '../ingest/store.ts';
+import type { SourcePost } from '../ingest/types.ts';
 
 const MINI_APP_URL = Deno.env.get('MINI_APP_URL')!.trim();
 const WEBHOOK_SECRET = Deno.env.get('TELEGRAM_WEBHOOK_SECRET');
@@ -60,12 +68,49 @@ async function handleLogin(token: string, chatId: number, from: TgUser) {
   await sendLoginCode(chatId, code);
 }
 
+/** Сообщение из группы-источника → разбор как поста канала. Правка с «КОМПЛЕКТ»/отменой снимает события поста. */
+// deno-lint-ignore no-explicit-any
+async function ingestGroupMessage(msg: any, edited: boolean) {
+  const username = String(msg.chat.username ?? '').toLowerCase();
+  const group = ingestConfig.telegramGroups.find((g) => g.name === username);
+  const text = msg.text ?? msg.caption;
+  if (!group || !text) return;
+  // В форуме сообщения общей ветки (General) приходят без message_thread_id; её номер — 1.
+  const thread = msg.is_topic_message ? msg.message_thread_id : 1;
+  if (group.thread !== undefined && thread !== group.thread) return;
+
+  const post: SourcePost = {
+    source: 'telegram',
+    postId: `${msg.chat.username}/${msg.message_id}`,
+    url: `https://t.me/${msg.chat.username}/${msg.message_id}`,
+    postedAt: new Date(msg.date * 1000).toISOString(),
+    text,
+    sourceName: msg.chat.title ?? msg.chat.username,
+    defaultSport: group.sport,
+  };
+  const admin = adminClient();
+  if (edited) {
+    const { reason } = extractEvents(post);
+    if (reason === 'набор закрыт' || reason === 'отмена или перенос') {
+      await admin.from('events').update({ status: 'hidden' }).like('external_key', `telegram:${post.postId}#%`);
+      return;
+    }
+  }
+  await ingestPosts(createStore(admin), [post], { geoSearch: dbSearch(admin) });
+}
+
 Deno.serve(async (req) => {
   if (WEBHOOK_SECRET && req.headers.get('x-telegram-bot-api-secret-token') !== WEBHOOK_SECRET) {
     return new Response('forbidden', { status: 403 });
   }
 
   const update = await req.json().catch(() => null);
+  const groupMsg = update?.message ?? update?.edited_message;
+  if (groupMsg && groupMsg.chat?.type !== 'private') {
+    // В группах бот только читает анонсы, команды там не обрабатываем.
+    await ingestGroupMessage(groupMsg, Boolean(update.edited_message)).catch((err) => console.error('ingest', err));
+    return new Response('ok');
+  }
   const msg = update?.message;
   if (!msg?.text) return new Response('ok');
 

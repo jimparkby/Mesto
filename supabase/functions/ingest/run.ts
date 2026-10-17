@@ -21,6 +21,11 @@ export interface RunOptions {
 
 /** Координаты ещё не пришли (геокодер через pg_net) — пост разберём в следующий проход. */
 const PENDING = Symbol('pending');
+/**
+ * Такой пост сохраняется в ingest_posts с этой пометкой и разбирается заново в каждом проходе: сообщения
+ * из групп приходят в вебхук один раз, и без этого событие с новым адресом потерялось бы.
+ */
+export const PENDING_NOTE = 'ждём координаты';
 
 export interface RunSummary {
   inserted: number;
@@ -67,8 +72,7 @@ async function toRow(post: SourcePost, e: ExtractedEvent, index: number, geoSear
   };
 }
 
-export async function runOnce(store: Store, options: RunOptions = {}): Promise<RunSummary> {
-  const summary: RunSummary = { inserted: 0, errors: 0, log: [] };
+function makeLogger(summary: RunSummary) {
   const log = (...parts: unknown[]) => {
     const line = parts.map(String).join(' ');
     summary.log.push(line);
@@ -78,6 +82,20 @@ export async function runOnce(store: Store, options: RunOptions = {}): Promise<R
     summary.errors++;
     log(`${where}: ошибка —`, err instanceof Error ? err.message : JSON.stringify(err));
   };
+  return { log, fail };
+}
+
+/**
+ * Разобрать готовые посты (уже отфильтрованные от разобранных раньше) и добавить найденные события.
+ * Используется проходом по источникам и для постов, которые приходят иначе (вебхук бота, разовый импорт).
+ */
+export async function ingestPosts(
+  store: Store,
+  posts: SourcePost[],
+  options: RunOptions = {},
+  summary: RunSummary = { inserted: 0, errors: 0, log: [] },
+): Promise<RunSummary> {
+  const { log, fail } = makeLogger(summary);
 
   async function processPost(post: SourcePost): Promise<void> {
     const { events: extracted, reason } = post.events
@@ -107,9 +125,24 @@ export async function runOnce(store: Store, options: RunOptions = {}): Promise<R
     const inserted = await store.insertEvents(rows);
     summary.inserted += inserted;
     if (inserted) log(`  ${post.url}: добавлено событий — ${inserted}`);
-    if (post.retryLater || pending) return;
-    await store.markProcessed(post, rows.length, reason ?? (notes.join('; ') || null));
+    if (post.retryLater) return;
+    await store.markProcessed(post, rows.length, pending ? PENDING_NOTE : reason ?? (notes.join('; ') || null));
   }
+
+  for (const post of posts) {
+    try {
+      if (options.verbose) log(`- ${post.url}: ${post.text.slice(0, 80).replace(/\n/g, ' ')}…`);
+      await processPost(post);
+    } catch (err) {
+      fail(`  ${post.url}`, err); // пост не помечен разобранным — попробуем в следующем проходе
+    }
+  }
+  return summary;
+}
+
+export async function runOnce(store: Store, options: RunOptions = {}): Promise<RunSummary> {
+  const summary: RunSummary = { inserted: 0, errors: 0, log: [] };
+  const { log, fail } = makeLogger(summary);
 
   async function ingestTelegram(channel: ChannelConfig): Promise<void> {
     const posts = await fetchTelegramChannel(channel, config.pagesPerChannel);
@@ -118,15 +151,7 @@ export async function runOnce(store: Store, options: RunOptions = {}): Promise<R
     const done = await store.processedPostIds('telegram', fresh.map((p) => p.postId));
     const todo = fresh.filter((p) => !done.has(p.postId));
     log(`@${channel.name}: постов ${posts.length}, свежих ${fresh.length}, новых ${todo.length}`);
-
-    for (const post of todo) {
-      try {
-        if (options.verbose) log(`- ${post.url}: ${post.text.slice(0, 80).replace(/\n/g, ' ')}…`);
-        await processPost(post);
-      } catch (err) {
-        fail(`  ${post.url}`, err); // пост не помечен разобранным — попробуем в следующем проходе
-      }
-    }
+    await ingestPosts(store, todo, options, summary);
   }
 
   async function ingestProbeg(cityId: number): Promise<void> {
@@ -135,17 +160,42 @@ export async function runOnce(store: Store, options: RunOptions = {}): Promise<R
     const todo = items.filter((i) => !done.has(i.postId));
     log(`probeg.org/races/city/${cityId}: будущих забегов ${items.length}, новых ${todo.length}`);
 
+    const posts: SourcePost[] = [];
     for (const item of todo) {
       try {
-        const post = await loadProbegEvent(item);
-        if (options.verbose) log(`- ${post.url}: ${post.text.split('\n')[0]}`);
-        await processPost(post);
+        posts.push(await loadProbegEvent(item));
       } catch (err) {
         fail(`  ${item.url}`, err);
       }
     }
+    await ingestPosts(store, posts, options, summary);
   }
 
+  async function retryPending(): Promise<void> {
+    const rows = await store.pendingPosts(PENDING_NOTE);
+    if (rows.length === 0) return;
+    log(`ждут координат: ${rows.length}`);
+    // Вид спорта тематического канала/группы берём из настроек по имени в post_id ('volley_by/95406').
+    const sources = [...config.telegramChannels, ...config.telegramGroups];
+    const posts: SourcePost[] = rows
+      .filter((r) => r.source === 'telegram')
+      .map((r) => ({
+        source: 'telegram',
+        postId: r.post_id,
+        url: r.url,
+        postedAt: r.posted_at,
+        text: r.text,
+        sourceName: r.post_id.split('/')[0],
+        defaultSport: sources.find((c) => c.name === r.post_id.split('/')[0].toLowerCase())?.sport,
+      }));
+    await ingestPosts(store, posts, options, summary);
+  }
+
+  try {
+    await retryPending();
+  } catch (err) {
+    fail('повторный разбор', err);
+  }
   for (const channel of config.telegramChannels) {
     try {
       await ingestTelegram(channel);

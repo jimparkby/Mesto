@@ -76,6 +76,19 @@ export function createStore(sb: Db) {
       );
     },
 
+    /** Посты, у которых часть событий ждала координат (см. PENDING_NOTE в run.ts) — разберём их ещё раз. */
+    async pendingPosts(note: string): Promise<{ source: string; post_id: string; url: string; posted_at: string | null; text: string }[]> {
+      if (!sb) return [];
+      const { data, error } = await sb
+        .from('ingest_posts')
+        .select('source, post_id, url, posted_at, text')
+        .eq('note', note)
+        .gte('processed_at', new Date(Date.now() - 2 * 86_400_000).toISOString())
+        .limit(50);
+      if (error) throw error;
+      return data;
+    },
+
     /** Повторный импорт того же события не перезаписывает правки админа (скрытие, исправления). */
     async insertEvents(rows: EventRow[]): Promise<number> {
       if (!sb || rows.length === 0) return 0;

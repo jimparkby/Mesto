@@ -25,16 +25,18 @@ export interface ChannelConfig {
   name: string;
   /** Тематический канал («только футбол») — посты не обязаны называть вид спорта. */
   sport?: SportId;
+  /** Только для групп: ветка форума (1 — общая «General»); не задана — все ветки. */
+  thread?: number;
 }
 
-/** 'football_minsk:football, minskafisha' → [{name, sport}, {name}] */
-function channels(value: string): ChannelConfig[] {
+/** 'football_minsk:football, minskafisha, volley_by:volleyball:1' → [{name, sport}, {name}, {name, sport, thread}] */
+function channels(value: string, variable: string): ChannelConfig[] {
   return list(value).map((item) => {
-    const [name, sport] = item.split(':').map((s) => s.trim());
+    const [name, sport, thread] = item.split(':').map((s) => s.trim());
     if (sport && !(SPORTS as readonly string[]).includes(sport)) {
-      throw new Error(`TG_CHANNELS: неизвестный вид спорта «${sport}» у @${name}. Допустимо: ${SPORTS.join(', ')}`);
+      throw new Error(`${variable}: неизвестный вид спорта «${sport}» у @${name}. Допустимо: ${SPORTS.join(', ')}`);
     }
-    return { name, sport: sport as SportId | undefined };
+    return { name: name.toLowerCase(), sport: (sport || undefined) as SportId | undefined, thread: thread ? Number(thread) : undefined };
   });
 }
 
@@ -43,7 +45,13 @@ export const config = {
   supabaseServiceKey: env('SUPABASE_SERVICE_ROLE_KEY') ?? '',
 
   /** Публичные Telegram-каналы без @, через запятую; ':sport' — для тематических каналов. */
-  telegramChannels: channels(env('TG_CHANNELS') || 'sportdlyavseh_bel,olympicteamby,mst_gov_by,minskafisha'),
+  telegramChannels: channels(env('TG_CHANNELS') || 'sportdlyavseh_bel,olympicteamby,mst_gov_by,minskafisha', 'TG_CHANNELS'),
+  /**
+   * Группы, сообщения из которых приходят в вебхук бота (supabase/functions/bot): бот должен быть в группе
+   * и видеть все сообщения (админ группы или privacy mode выключен в @BotFather). Публичного превью
+   * у групп нет, поэтому опрашивать их, как каналы, нельзя. 'volley_by:volleyball:1' — ветка General.
+   */
+  telegramGroups: channels(env('INGEST_GROUPS') ?? '', 'INGEST_GROUPS'),
   /** Календари городов на probeg.org (1581 — Минск); пусто — не опрашивать. */
   probegCityIds: list(env('PROBEG_CITY_IDS') ?? '1581').map(Number).filter(Number.isFinite),
 

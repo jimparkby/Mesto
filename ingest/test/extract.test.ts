@@ -137,3 +137,65 @@ test('розыгрыш — не событие', () => {
   const r = extractEvents(post('Сегодня на тренировках разыграем велосипеды! В 20:30 приходите к сцене, Парк Павлова, 18.10.'));
   assert.deepEqual(r.events, []);
 });
+
+// ---------- чаты вроде «Волейбол в Минске»: тематический канал, сообщения без заголовков ----------
+
+function chat(text: string): SourcePost {
+  return { ...post(text), defaultSport: 'volleyball' };
+}
+
+test('чат: день недели, адрес без «ул.», время «20.00-22.00», уровень и цена', () => {
+  const r = extractEvents(chat(
+    'Новое объявление в ВК:\nВоскресенье\nФилимонова 55/1,\nкрепкий д4,д3,\n20.00-22.00.\nЕсть место в связку,\n' +
+    'в ЛС. Игра 4/2. 10р. 20+\n[#alias|t.me/someone|t.me/someone]\n\nАвтор: https://vk.com/id1\nТеги: #игра',
+  ));
+  assert.equal(r.events.length, 1);
+  const e = r.events[0];
+  assert.equal(e.starts_at_local, '2026-10-18T20:00');
+  assert.equal(e.duration_min, 120);
+  assert.equal(e.title, 'Волейбол, Д3–Д4 — Филимонова 55/1');
+  assert.equal(e.address, 'Филимонова 55/1');
+  assert.equal(e.level, 'intermediate');
+  assert.equal(e.price_byn, 10);
+  assert.equal(e.confident, true);
+  assert.ok(!e.description.includes('Автор:'));
+  assert.ok(e.description.includes('t.me/someone'));
+});
+
+test('чат: «21-23:00», адрес в строке с датой, «одно место»', () => {
+  const r = extractEvents(chat('Сегодня (пт 16.10) на Солтыса 187/1 есть одно место в связку,\nмикс Д4, 4/2\n21-23:00, 11р'));
+  assert.equal(r.events.length, 1);
+  assert.equal(r.events[0].starts_at_local, '2026-10-16T21:00');
+  assert.equal(r.events[0].duration_min, 120);
+  assert.equal(r.events[0].address, 'Солтыса 187/1');
+  assert.equal(r.events[0].capacity, 1);
+});
+
+test('чат: «в 18-45», «с 19 до 21», «Начало 19.30»', () => {
+  assert.equal(extractEvents(chat('сегодня в 18-45 есть места в атаку, Тихая 20а, бесплатно')).events[0].starts_at_local, '2026-10-16T18:45');
+  const fromTo = extractEvents(chat('Сегодня на Могилевской 37 с 19 до 21 есть 4 места. Бесплатно')).events[0];
+  assert.equal(fromTo.starts_at_local, '2026-10-16T19:00');
+  assert.equal(fromTo.capacity, 4);
+  assert.equal(extractEvents(chat('Играем сегодня на Щербакова23. Два места. Цена 10 руб. Начало 19.30')).events[0].starts_at_local, '2026-10-16T19:30');
+});
+
+test('чат: название зала рядом с адресом', () => {
+  const r = extractEvents(chat('Сегодня (16.10) ФОК Атлант, Сапёров 5. 20:30-22:00\n1 место в СВЯЗКУ\nД3-Д4, 13р'));
+  assert.equal(r.events[0].venue_name, 'ФОК Атлант');
+  assert.equal(r.events[0].address, 'Сапёров 5');
+});
+
+test('чат: «КОМПЛЕКТ» и «ищу где поиграть» — не события', () => {
+  assert.equal(extractEvents(chat('КОМПЛЕКТ\nВоскресенье, 16.00-18.00\nФилимонова 55/1\nМикс, д4, 10 руб')).reason, 'набор закрыт');
+  assert.equal(extractEvents(chat('Ищу где можно сегодня поиграть, район Сухарево, д4')).reason, 'ищут игру, а не зовут');
+});
+
+test('чат: «Игра 4/2», «Есть 2 места», «с тренером 15р» — не адреса', () => {
+  const r = extractEvents(chat('Суббота 17.10\n15.00\nИгровая с тренером\n15р\nЕсть 2 места. Игра 4/2'));
+  assert.equal(r.reason, 'нет места');
+});
+
+test('чат: опечатка в месяце («Суббота 10.09» в октябре) — берём день недели', () => {
+  const r = extractEvents(chat('Суббота 10.09\nСШ 56, Каменногорская 70\n15:00-17:00, 20р'));
+  assert.equal(r.events[0].starts_at_local, '2026-10-17T15:00');
+});
