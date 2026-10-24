@@ -6,8 +6,8 @@ import { LoginSheet } from '../components/LoginSheet';
 import { PageHeader } from '../components/PageHeader';
 import { SportIcon } from '../components/SportIcon';
 import { MapView } from '../components/MapView';
-import { LEVELS, SPORTS } from '../domain/sports';
-import type { LatLng, Level, SportId } from '../domain/types';
+import { LEVELS, SPORTS, EVENT_TYPES } from '../domain/sports';
+import type { EventType, LatLng, Level, SportId } from '../domain/types';
 import { useToast } from '../state';
 
 function defaultDateTime(): string {
@@ -26,6 +26,7 @@ export function CreateEventPage() {
   const [busy, setBusy] = useState(false);
 
   const [sport, setSport] = useState<SportId>('football');
+  const [eventType, setEventType] = useState<EventType>('game');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [when, setWhen] = useState(defaultDateTime);
@@ -59,6 +60,7 @@ export function CreateEventPage() {
         {
           title: title.trim(),
           sport,
+          eventType,
           description: description.trim(),
           startsAt: new Date(when).toISOString(),
           durationMin,
@@ -108,6 +110,22 @@ export function CreateEventPage() {
               >
                 <SportIcon sport={s.id} size={18} color={sport === s.id ? undefined : s.color} />
                 {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <div className="label">Тип события</div>
+          <div className="chips-wrap">
+            {EVENT_TYPES.map((t) => (
+              <button
+                type="button"
+                key={t.id}
+                className={`chip${eventType === t.id ? ' is-on' : ''}`}
+                onClick={() => setEventType(t.id)}
+              >
+                {t.label}
               </button>
             ))}
           </div>

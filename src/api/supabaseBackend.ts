@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AppUser, Level, SportEvent, SportId } from '../domain/types';
+import type { AppUser, EventType, Level, SportEvent, SportId } from '../domain/types';
 import { platform } from '../platforms';
 import type { Backend, Participant } from './types';
 
@@ -7,6 +7,7 @@ interface EventRow {
   id: string;
   title: string;
   sport: SportEvent['sport'];
+  event_type: EventType;
   description: string;
   starts_at: string;
   duration_min: number;
@@ -42,6 +43,7 @@ function toEvent(r: EventRow): SportEvent {
     id: r.id,
     title: r.title,
     sport: r.sport,
+    eventType: r.event_type ?? 'game',
     description: r.description,
     startsAt: r.starts_at,
     durationMin: r.duration_min,
@@ -191,6 +193,7 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
           .insert({
             title: input.title,
             sport: input.sport,
+            event_type: input.eventType,
             description: input.description,
             starts_at: input.startsAt,
             duration_min: input.durationMin,

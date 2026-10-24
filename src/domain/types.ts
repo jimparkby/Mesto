@@ -13,12 +13,15 @@ export type SportId =
 
 export type Level = 'any' | 'beginner' | 'intermediate' | 'advanced';
 
+export type EventType = 'training' | 'game';
+
 export type EventStatus = 'published' | 'hidden' | 'cancelled';
 
 export interface SportEvent {
   id: string;
   title: string;
   sport: SportId;
+  eventType: EventType;
   description: string;
   startsAt: string; // ISO
   durationMin: number;
@@ -42,6 +45,7 @@ export type NewEventInput = Pick<
   SportEvent,
   | 'title'
   | 'sport'
+  | 'eventType'
   | 'description'
   | 'startsAt'
   | 'durationMin'

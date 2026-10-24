@@ -1,4 +1,4 @@
-import type { Level, SportId } from './types';
+import type { EventType, Level, SportId } from './types';
 
 export interface SportMeta {
   id: SportId;
@@ -34,6 +34,15 @@ export const LEVELS: { id: Level; label: string }[] = [
   { id: 'intermediate', label: 'Средний' },
   { id: 'advanced', label: 'Продвинутый' },
 ];
+
+export const EVENT_TYPES: { id: EventType; label: string; plural: string }[] = [
+  { id: 'training', label: 'Тренировка', plural: 'Тренировки' },
+  { id: 'game', label: 'Игра', plural: 'Игры' },
+];
+
+export function eventTypeLabel(t: EventType): string {
+  return EVENT_TYPES.find((x) => x.id === t)?.label ?? t;
+}
 
 export function levelLabel(level: Level): string {
   return LEVELS.find((l) => l.id === level)?.label ?? level;

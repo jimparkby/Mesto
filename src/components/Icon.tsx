@@ -5,6 +5,7 @@ import {
   CheckCircle,
   Clock,
   Crosshair,
+  DotsThree,
   Export,
   MagnifyingGlass,
   MapPin,
@@ -51,6 +52,7 @@ const ICONS = {
   check: CheckCircle,
   close: X,
   edit: PencilSimple,
+  dots: DotsThree,
 } as const;
 
 export type IconName = keyof typeof ICONS;

@@ -8,7 +8,7 @@ import { DEMO_PARTICIPANT_NAMES, generateSeedEvents } from './seed';
  * Нужен, чтобы MVP можно было показать сразу — в браузере, в Telegram и в APK.
  */
 
-const STATE_KEY = 'sr_demo_state_v1';
+const STATE_KEY = 'sr_demo_state_v2';
 const USER_KEY = 'sr_demo_user_v1';
 
 interface Registration {

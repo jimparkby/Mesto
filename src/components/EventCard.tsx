@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { distanceKm, formatDistance, formatPrice, formatWhen, isFull, pluralPlaces, spotsLeft } from '../domain/events';
-import { levelLabel, sportMeta } from '../domain/sports';
+import { eventTypeLabel, levelLabel, sportMeta } from '../domain/sports';
 import type { LatLng, SportEvent } from '../domain/types';
 import { Icon } from './Icon';
 import { SportIcon } from './SportIcon';
@@ -27,6 +27,7 @@ export function EventCard({ event: e, location, joined, compact }: Props) {
           <span className="event-card-sport" style={{ color: meta.color }}>
             {meta.label}
           </span>
+          <span className="badge badge-muted">{eventTypeLabel(e.eventType)}</span>
           {joined && <span className="badge badge-ok">Вы идёте</span>}
           {e.status !== 'published' && <span className="badge badge-warn">{e.status === 'hidden' ? 'Скрыто' : 'Отменено'}</span>}
         </div>
