@@ -1,13 +1,24 @@
 import { distanceKm } from './events';
-import type { LatLng, Level, SportEvent, SportId } from './types';
+import { divisionLevel, divisionTagsIn } from './levels';
+import type { EventType, LatLng, Level, SportEvent, SportId } from './types';
 
 export type DateRange = 'all' | 'today' | 'tomorrow' | 'weekend' | 'week';
 
+/** Выбранное деление вида спорта: «Д3» в волейболе, «3.5» в теннисе. */
+export interface DivisionFilter {
+  sport: SportId;
+  tag: string;
+}
+
 export interface EventFilters {
   query: string;
+  /** Тип события: всё / только тренировки / только игры. */
+  eventType: EventType | 'all';
   sports: SportId[];
   date: DateRange;
   level: Level | 'all';
+  /** Деление вида спорта; задаётся вместе с level (общий уровень деления). */
+  division: DivisionFilter | null;
   freeOnly: boolean;
   /** Макс. расстояние в км; учитывается только если известна геопозиция. */
   radiusKm: number | null;
@@ -15,9 +26,11 @@ export interface EventFilters {
 
 export const DEFAULT_FILTERS: EventFilters = {
   query: '',
+  eventType: 'all',
   sports: [],
   date: 'all',
   level: 'all',
+  division: null,
   freeOnly: false,
   radiusKm: null,
 };
@@ -59,8 +72,9 @@ function inDateRange(iso: string, range: DateRange, now: Date): boolean {
 export function countActiveFilters(f: EventFilters): number {
   return (
     (f.sports.length ? 1 : 0) +
+    (f.eventType !== 'all' ? 1 : 0) +
     (f.date !== 'all' ? 1 : 0) +
-    (f.level !== 'all' ? 1 : 0) +
+    (f.level !== 'all' || f.division ? 1 : 0) +
     (f.freeOnly ? 1 : 0) +
     (f.radiusKm ? 1 : 0)
   );
@@ -74,10 +88,23 @@ export function applyFilters(
 ): SportEvent[] {
   const q = f.query.trim().toLowerCase();
   return events.filter((e) => {
+    if (f.eventType !== 'all' && e.eventType !== f.eventType) return false;
     if (f.sports.length && !f.sports.includes(e.sport)) return false;
     if (!inDateRange(e.startsAt, f.date, now)) return false;
     // Событие «для любого уровня» подходит под любой выбранный уровень.
-    if (f.level !== 'all' && e.level !== 'any' && e.level !== f.level) return false;
+    if (f.division) {
+      // Деление работает только внутри своего вида спорта.
+      if (e.sport !== f.division.sport) return false;
+      const tags = divisionTagsIn(e.title, f.division.sport);
+      if (tags.length) {
+        // В заголовке есть метки дивизионов («Д3–Д4») — сверяемся с ними.
+        if (!tags.includes(f.division.tag)) return false;
+      } else {
+        // Меток нет — откатываемся к общему уровню деления.
+        const want = divisionLevel(f.division.sport, f.division.tag);
+        if (e.level !== 'any' && want && e.level !== want) return false;
+      }
+    } else if (f.level !== 'all' && e.level !== 'any' && e.level !== f.level) return false;
     if (f.freeOnly && e.price > 0) return false;
     if (f.radiusKm && location && distanceKm(location, e) > f.radiusKm) return false;
     if (q) {

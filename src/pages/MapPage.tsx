@@ -33,7 +33,7 @@ export function MapPage() {
         className="map-full"
       />
       <div className="map-top">
-        <FilterBar location={geo.location} onRequestLocation={geo.request} geoPending={geo.status === 'pending'} />
+        <FilterBar location={geo.location} onRequestLocation={geo.request} geoPending={geo.status === 'pending'} events={events} />
       </div>
       <button className="fab-locate" onClick={geo.request} aria-label="Где я">
         <Icon name="near" size={22} className={geo.status === 'pending' ? 'is-pending' : undefined} />

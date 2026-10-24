@@ -40,7 +40,7 @@ export function HomePage() {
         {api.mode === 'demo' && <span className="badge badge-muted" title="Данные хранятся на устройстве">демо-режим</span>}
       </PageHeader>
 
-      <FilterBar location={geo.location} onRequestLocation={geo.request} geoPending={geo.status === 'pending'} />
+      <FilterBar location={geo.location} onRequestLocation={geo.request} geoPending={geo.status === 'pending'} events={events} />
 
       <div className="list-toolbar">
         <span className="muted">{loading ? 'Загрузка…' : `Найдено: ${visible.length}`}</span>
