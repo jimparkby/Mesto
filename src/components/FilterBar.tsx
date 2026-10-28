@@ -86,7 +86,7 @@ export function FilterBar({ location, onRequestLocation, geoPending, events }: P
 
   return (
     <div className="filterbar">
-      <div className="segmented full type-segment" role="tablist" aria-label="Тип события">
+      <div className="segmented full type-segment" role="tablist" aria-label="Тип события" data-tour="types">
         <button
           className={filters.eventType === 'all' ? 'is-on' : ''}
           onClick={() => setFilters((f) => ({ ...f, eventType: 'all' }))}
@@ -122,7 +122,7 @@ export function FilterBar({ location, onRequestLocation, geoPending, events }: P
         </button>
       </div>
 
-      <div className="chips-scroll">
+      <div className="chips-scroll" data-tour="chips">
         <button
           className={`chip${filters.date === 'today' ? ' is-on' : ''}`}
           onClick={() => setFilters((f) => ({ ...f, date: f.date === 'today' ? 'all' : 'today' }))}

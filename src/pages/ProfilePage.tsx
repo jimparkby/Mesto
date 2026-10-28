@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Desktop, MoonStars, Sun } from '@phosphor-icons/react';
 import { useAuth } from '../auth/AuthContext';
 import { AboutSection } from '../components/AboutSection';
 import { Avatar } from '../components/Avatar';
@@ -8,10 +9,18 @@ import { Icon, IconTile, TILE } from '../components/Icon';
 import { LoginSheet } from '../components/LoginSheet';
 import { isPast } from '../domain/events';
 import { useEvents } from '../hooks';
+import { useTheme, type ThemeMode } from '../theme';
+
+const THEME_OPTIONS: { id: ThemeMode; label: string; Glyph: typeof Sun }[] = [
+  { id: 'system', label: 'Система', Glyph: Desktop },
+  { id: 'light', label: 'Светлая', Glyph: Sun },
+  { id: 'dark', label: 'Тёмная', Glyph: MoonStars },
+];
 
 export function ProfilePage() {
   const { user, loading, error, signOut, myEventIds } = useAuth();
   const { events } = useEvents({ includeHidden: true });
+  const { mode, setMode } = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
   const [tab, setTab] = useState<'upcoming' | 'mine' | 'past'>('upcoming');
 
@@ -101,6 +110,18 @@ export function ProfilePage() {
       </div>
 
       <AboutSection />
+
+      <section className="card settings">
+        <div className="label">Оформление</div>
+        <div className="segmented full theme-segment">
+          {THEME_OPTIONS.map(({ id, label, Glyph }) => (
+            <button key={id} className={mode === id ? 'is-on' : ''} onClick={() => setMode(id)}>
+              <Glyph size={15} weight="fill" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {(user?.role === 'admin' || (user && user.provider !== 'telegram')) && (
         <section className="card settings">

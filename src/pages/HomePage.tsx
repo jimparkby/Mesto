@@ -42,7 +42,7 @@ export function HomePage() {
 
       <FilterBar location={geo.location} onRequestLocation={geo.request} geoPending={geo.status === 'pending'} events={events} />
 
-      <div className="list-toolbar">
+      <div className="list-toolbar" data-tour="list">
         <span className="muted">{loading ? 'Загрузка…' : `Найдено: ${visible.length}`}</span>
         <div className="segmented">
           <button className={sort === 'time' ? 'is-on' : ''} onClick={() => setSort('time')}>

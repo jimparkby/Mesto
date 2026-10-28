@@ -13,6 +13,7 @@ export async function webShare(url: string, text: string): Promise<void> {
 }
 
 export function createWebPlatform(): Platform {
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
   return {
     kind: 'web',
     async init() {},
@@ -33,6 +34,12 @@ export function createWebPlatform(): Platform {
       if (value === null) localStorage.removeItem(key);
       else localStorage.setItem(key, value);
     },
+    systemScheme: () => 'light' as const,
+    onSystemSchemeChange(cb) {
+      media.addEventListener('change', cb);
+      return () => media.removeEventListener('change', cb);
+    },
+    setAppScheme() {},
     telegramInitData: () => null,
     telegramUser: () => null,
     startParam: () => new URLSearchParams(location.search).get('startapp'),

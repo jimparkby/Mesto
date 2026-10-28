@@ -5,17 +5,28 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import type { Platform } from './types';
 
+/** Дубль ключа из src/theme.tsx (без импорта, чтобы не зацикливать платформу и тему). */
+const THEME_STORAGE_KEY = 'theme:v1';
+
+function applyStatusBar(scheme: 'light' | 'dark') {
+  StatusBar.setStyle({ style: scheme === 'dark' ? Style.Dark : Style.Light }).catch(() => {});
+  StatusBar.setBackgroundColor({ color: scheme === 'dark' ? '#140a0c' : '#ffffff' }).catch(() => {});
+}
+
 /** Android-оболочка на Capacitor. */
 export function createNativePlatform(): Platform {
   let backHandler: (() => void) | null = null;
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
 
   return {
     kind: 'native',
     async init() {
       document.documentElement.dataset.platform = 'native';
-      const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      await StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light }).catch(() => {});
-      await StatusBar.setBackgroundColor({ color: dark ? '#140a0c' : '#f6f1ef' }).catch(() => {});
+      // До первого рендера: по умолчанию белая; тёмная — только явный выбор.
+      const stored = (await Preferences.get({ key: THEME_STORAGE_KEY }).catch(() => ({ value: null }))).value;
+      const scheme: 'light' | 'dark' = stored === 'dark' ? 'dark' : 'light';
+      document.documentElement.dataset.scheme = scheme;
+      applyStatusBar(scheme);
 
       // Аппаратная кнопка «Назад»: сначала внутренняя навигация, на корневом экране — выход.
       await App.addListener('backButton', () => {
@@ -46,6 +57,12 @@ export function createNativePlatform(): Platform {
       if (value === null) await Preferences.remove({ key });
       else await Preferences.set({ key, value });
     },
+    systemScheme: () => 'light' as const,
+    onSystemSchemeChange(cb) {
+      media.addEventListener('change', cb);
+      return () => media.removeEventListener('change', cb);
+    },
+    setAppScheme: applyStatusBar,
     telegramInitData: () => null,
     telegramUser: () => null,
     startParam: () => null,

@@ -23,6 +23,7 @@ interface TgWebApp {
   setBackgroundColor?: (c: string) => void;
   setBottomBarColor?: (c: string) => void;
   onEvent(event: 'themeChanged', cb: () => void): void;
+  offEvent?(event: 'themeChanged', cb: () => void): void;
   BackButton: TgButton;
   HapticFeedback?: {
     impactOccurred(s: 'light' | 'medium' | 'heavy'): void;
@@ -45,6 +46,15 @@ declare global {
 }
 
 const CLOUD_TIMEOUT_MS = 1500;
+
+/** Дубль ключа из src/theme.tsx (без импорта, чтобы не зацикливать платформу и тему). */
+const THEME_STORAGE_KEY = 'theme:v1';
+
+/** Явный выбор пользователя: dark — только если выбрано; иначе белая (не тема Telegram). */
+function storedSchemeOverride(): 'light' | 'dark' {
+  const v = localStorage.getItem(THEME_STORAGE_KEY);
+  return v === 'dark' ? 'dark' : 'light';
+}
 
 /** CloudStorage принимает ключи только из A-Z, a-z, 0-9, _ и -. */
 function cloudKey(key: string): string {
@@ -70,17 +80,19 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       }
       document.documentElement.dataset.platform = 'telegram';
       // Палитра своя, от Telegram берём только светлую/тёмную схему.
-      const applyScheme = () => {
-        document.documentElement.dataset.scheme = tg.colorScheme;
-        const bg = tg.colorScheme === 'dark' ? '#140a0c' : '#f6f1ef';
+      // data-scheme выставляет ThemeProvider; здесь — тактилка до первого рендера и цвета хрома Telegram.
+      const applyChrome = () => {
+        const scheme = storedSchemeOverride();
+        document.documentElement.dataset.scheme = scheme;
+        const bg = scheme === 'dark' ? '#140a0c' : '#ffffff';
         if (tg.isVersionAtLeast('6.1')) {
           tg.setHeaderColor?.(bg);
           tg.setBackgroundColor?.(bg);
         }
         if (tg.isVersionAtLeast('7.10')) tg.setBottomBarColor?.(bg);
       };
-      applyScheme();
-      tg.onEvent('themeChanged', applyScheme);
+      applyChrome();
+      tg.onEvent('themeChanged', applyChrome);
     },
     setBackHandler(handler) {
       if (!handler) {
@@ -135,6 +147,18 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       if (!cs || !tg.isVersionAtLeast('6.9')) return;
       if (value === null) cs.removeItem(cloudKey(key));
       else cs.setItem(cloudKey(key), value);
+    },
+    systemScheme: () => 'light' as const,
+    onSystemSchemeChange(cb) {
+      tg.onEvent('themeChanged', cb);
+      return () => tg.offEvent?.('themeChanged', cb);
+    },
+    setAppScheme(scheme) {
+      const bg = scheme === 'dark' ? '#140a0c' : '#ffffff';
+      if (!tg.isVersionAtLeast('6.1')) return;
+      tg.setHeaderColor?.(bg);
+      tg.setBackgroundColor?.(bg);
+      if (tg.isVersionAtLeast('7.10')) tg.setBottomBarColor?.(bg);
     },
     telegramInitData: () => tg.initData,
     telegramUser: () => tg.initDataUnsafe.user ?? null,

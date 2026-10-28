@@ -31,9 +31,7 @@ interface GlLib {
 }
 
 function isDark(): boolean {
-  const scheme = document.documentElement.dataset.scheme; // выставляет Telegram-платформа
-  if (scheme) return scheme === 'dark';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return document.documentElement.dataset.scheme === 'dark';
 }
 
 /**

@@ -46,6 +46,7 @@ export function Layout() {
               key={t.to}
               to={t.to}
               end
+              data-tour={t.to === '/map' ? 'tab-map' : t.to === '/create' ? 'tab-create' : undefined}
               className={({ isActive }) => `tab${t.to === '/create' ? ' tab-create' : ''}${isActive ? ' is-active' : ''}`}
               onClick={() => platform.haptic('selection')}
             >
