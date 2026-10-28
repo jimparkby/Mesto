@@ -73,9 +73,6 @@
   color-scheme: dark;
 }
 
-/* Тёмная схема — только явный выбор; системный prefers-color-scheme больше не перекрывает белую. */
-:root[data-scheme='dark'] {
-
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
