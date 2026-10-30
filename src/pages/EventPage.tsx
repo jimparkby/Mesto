@@ -58,7 +58,7 @@ export function EventPage() {
           <Icon name="search" size={40} />
         </div>
         <p>Событие не найдено или удалено.</p>
-        <Link to="/" className="btn btn-ghost">
+        <Link to="/events" className="btn btn-ghost">
           К списку событий
         </Link>
       </div>

@@ -9,6 +9,7 @@ import { AdminPage } from './pages/AdminPage';
 import { CreateEventPage } from './pages/CreateEventPage';
 import { EventPage } from './pages/EventPage';
 import { HomePage } from './pages/HomePage';
+import { MainPage } from './pages/MainPage';
 import { MapPage } from './pages/MapPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { platform } from './platforms';
@@ -92,7 +93,8 @@ export function App() {
                 {onboarding.justFinished && onboarding.tour === 'done' && <LoginAfterOnboarding />}
                 <Routes>
                   <Route element={<Layout />}>
-                    <Route index element={<HomePage />} />
+                    <Route index element={<MainPage />} />
+                    <Route path="events" element={<HomePage />} />
                     <Route path="map" element={<MapPage />} />
                     <Route path="create" element={<CreateEventPage />} />
                     <Route path="profile" element={<ProfilePage />} />

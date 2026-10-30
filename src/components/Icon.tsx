@@ -7,6 +7,7 @@ import {
   Crosshair,
   DotsThree,
   Export,
+  House,
   MagnifyingGlass,
   MapPin,
   MapTrifold,
@@ -30,6 +31,7 @@ import {
  * которые Apple разрешает только в приложениях для своих платформ.
  */
 const ICONS = {
+  home: House,
   events: CalendarBlank,
   map: MapTrifold,
   plus: Plus,

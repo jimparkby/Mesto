@@ -68,9 +68,9 @@ export function FeatureTour({ onDone }: Props) {
 
   const last = index === STEPS.length - 1;
 
-  // Тур всегда стартует на главной.
+  // Тур всегда стартует на ленте событий.
   useEffect(() => {
-    if (location.pathname !== '/') navigate('/', { replace: true });
+    if (location.pathname !== '/events') navigate('/events', { replace: true });
   }, [location.pathname, navigate]);
 
   const measure = useCallback((i: number) => {
