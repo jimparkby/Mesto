@@ -657,6 +657,118 @@ select.input {
 .type-segment {
   width: 100%;
 }
+/* ===== Страница «События»: шапка с кнопкой создания ===== */
+.events-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 6px;
+}
+.events-head-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.events-title {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 34px;
+}
+.events-create {
+  flex: none;
+  min-height: 42px;
+  padding: 0 16px;
+  gap: 6px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+/* Типы событий в одну строку с кнопкой фильтров, когда поиск живёт над сводкой. */
+.filterbar-types {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filterbar-types .type-segment {
+  flex: 1;
+  width: auto;
+}
+.filterbar-types .btn-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+/* ===== Сводка: тренировки за неделю и ближайшие ===== */
+.events-summary {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--burgundy);
+  color: #fff;
+  box-shadow: var(--shadow-float);
+}
+.summary-deco {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  color: rgba(255, 255, 255, 0.16);
+  pointer-events: none;
+}
+.summary-cap {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+}
+.summary-num {
+  margin-top: 4px;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.summary-next {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+.summary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background 0.15s;
+}
+.summary-row:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+.summary-row-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.summary-row-when {
+  flex: none;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+}
+.summary-empty {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+}
 .sheet-search {
   margin-bottom: 12px;
 }

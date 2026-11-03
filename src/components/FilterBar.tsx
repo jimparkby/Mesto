@@ -17,13 +17,15 @@ interface Props {
   geoPending?: boolean;
   /** События для расчёта популярных видов спорта. Без них — фиксированный топ. */
   events?: SportEvent[];
+  /** Страница рисует поиск сама (выше сводки) — строка поиска здесь не нужна. */
+  hideSearch?: boolean;
 }
 
 /** Сколько популярных видов спорта показывать в карусели (остальные — через «Ещё»). */
 const POPULAR_LIMIT = 5;
 const FALLBACK_POPULAR: SportId[] = ['football', 'basketball', 'volleyball', 'running', 'tennis'];
 
-export function FilterBar({ location, onRequestLocation, geoPending, events }: Props) {
+export function FilterBar({ location, onRequestLocation, geoPending, events, hideSearch }: Props) {
   const { filters, setFilters } = useFilters();
   const [open, setOpen] = useState(false);
   const [allSportsOpen, setAllSportsOpen] = useState(false);
@@ -84,43 +86,60 @@ export function FilterBar({ location, onRequestLocation, geoPending, events }: P
     setSportQuery('');
   };
 
+  const typeSegment = (
+    <div className="segmented full type-segment" role="tablist" aria-label="Тип события" data-tour="types">
+      <button
+        className={filters.eventType === 'all' ? 'is-on' : ''}
+        onClick={() => setFilters((f) => ({ ...f, eventType: 'all' }))}
+      >
+        Все
+      </button>
+      {EVENT_TYPES.map((t) => (
+        <button
+          key={t.id}
+          className={filters.eventType === t.id ? 'is-on' : ''}
+          onClick={() => setFilters((f) => ({ ...f, eventType: t.id as EventType }))}
+        >
+          {t.plural}
+        </button>
+      ))}
+    </div>
+  );
+
+  const filterBtn = (
+    <button className={`btn-icon${active ? ' is-active' : ''}`} onClick={() => setOpen(true)} aria-label="Фильтры">
+      <Icon name="filter" size={22} weight="bold" />
+      {active > 0 && <span className="dot">{active}</span>}
+    </button>
+  );
+
   return (
     <div className="filterbar">
-      <div className="segmented full type-segment" role="tablist" aria-label="Тип события" data-tour="types">
-        <button
-          className={filters.eventType === 'all' ? 'is-on' : ''}
-          onClick={() => setFilters((f) => ({ ...f, eventType: 'all' }))}
-        >
-          Все
-        </button>
-        {EVENT_TYPES.map((t) => (
-          <button
-            key={t.id}
-            className={filters.eventType === t.id ? 'is-on' : ''}
-            onClick={() => setFilters((f) => ({ ...f, eventType: t.id as EventType }))}
-          >
-            {t.plural}
-          </button>
-        ))}
-      </div>
+      {hideSearch ? (
+        <div className="filterbar-types">
+          {typeSegment}
+          {filterBtn}
+        </div>
+      ) : (
+        typeSegment
+      )}
 
-      <div className="search-row">
-        <label className="search-box">
-          <Icon name="search" size={20} weight="bold" />
-          <input
-            className="input"
-            type="search"
-            placeholder="Поиск событий"
-            aria-label="Поиск"
-            value={filters.query}
-            onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
-          />
-        </label>
-        <button className={`btn-icon${active ? ' is-active' : ''}`} onClick={() => setOpen(true)} aria-label="Фильтры">
-          <Icon name="filter" size={22} weight="bold" />
-          {active > 0 && <span className="dot">{active}</span>}
-        </button>
-      </div>
+      {!hideSearch && (
+        <div className="search-row">
+          <label className="search-box">
+            <Icon name="search" size={20} weight="bold" />
+            <input
+              className="input"
+              type="search"
+              placeholder="Поиск событий"
+              aria-label="Поиск"
+              value={filters.query}
+              onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
+            />
+          </label>
+          {filterBtn}
+        </div>
+      )}
 
       <div className="chips-scroll" data-tour="chips">
         <button

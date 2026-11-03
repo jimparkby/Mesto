@@ -1,17 +1,20 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api';
 import { EventCard } from '../components/EventCard';
 import { FilterBar } from '../components/FilterBar';
 import { Icon } from '../components/Icon';
-import { PageHeader } from '../components/PageHeader';
-import { formatDay, isPast } from '../domain/events';
+import { SportIcon } from '../components/SportIcon';
+import { formatDay, formatTime, isPast } from '../domain/events';
 import { applyFilters, countActiveFilters, DEFAULT_FILTERS, sortEvents } from '../domain/filters';
 import { useEvents, useGeolocation } from '../hooks';
 import { useFilters } from '../state';
 
+const WEEK_MS = 7 * 86_400_000;
+
 export function HomePage() {
-  const { user, myEventIds } = useAuth();
+  const { myEventIds } = useAuth();
   const { events, loading, error, reload } = useEvents();
   const { filters, setFilters, sort, setSort } = useFilters();
   const geo = useGeolocation();
@@ -32,15 +35,86 @@ export function HomePage() {
     return [...map.entries()].map(([day, items]) => ({ day, items }));
   }, [visible, sort]);
 
+  // Сводка сверху: все опубликованные предстоящие события, без учёта фильтров.
+  const upcoming = useMemo(
+    () =>
+      events
+        .filter((e) => e.status === 'published' && !isPast(e))
+        .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt)),
+    [events],
+  );
+
+  const weekCount = useMemo(() => {
+    const horizon = Date.now() + WEEK_MS;
+    return upcoming.filter((e) => +new Date(e.startsAt) <= horizon).length;
+  }, [upcoming]);
+
+  const nearest = useMemo(() => upcoming.slice(0, 2), [upcoming]);
+
   const hasFilters = countActiveFilters(filters) > 0 || filters.query !== '';
 
   return (
     <div className="page">
-      <PageHeader eyebrow="Mesto · Минск" title={user ? `Привет, ${user.name.split(' ')[0]}!` : 'Mesto'}>
-        {api.mode === 'demo' && <span className="badge badge-muted" title="Данные хранятся на устройстве">демо-режим</span>}
-      </PageHeader>
+      <header className="events-head">
+        <div className="events-head-text">
+          <h1 className="events-title">События</h1>
+          {api.mode === 'demo' && (
+            <span className="badge badge-muted" title="Данные хранятся на устройстве">
+              демо-режим
+            </span>
+          )}
+        </div>
+        <Link to="/create" className="btn btn-primary btn-sm events-create">
+          <Icon name="plus" size={16} weight="bold" />
+          Создать
+        </Link>
+      </header>
 
-      <FilterBar location={geo.location} onRequestLocation={geo.request} geoPending={geo.status === 'pending'} events={events} />
+      <div className="search-row">
+        <label className="search-box">
+          <Icon name="search" size={20} weight="bold" />
+          <input
+            className="input"
+            type="search"
+            placeholder="Поиск событий"
+            aria-label="Поиск"
+            value={filters.query}
+            onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
+          />
+        </label>
+      </div>
+
+      <section className="events-summary">
+        <Icon name="events" size={64} className="summary-deco" />
+        <div className="summary-head">
+          <p className="summary-cap">Тренировок за неделю</p>
+          <p className="summary-num">{weekCount}</p>
+        </div>
+        <div className="summary-next">
+          <p className="summary-cap">Тренировки в ближайшее время</p>
+          {nearest.length === 0 ? (
+            <p className="summary-empty">Пока тренировок нет</p>
+          ) : (
+            nearest.map((e) => (
+              <Link key={e.id} to={`/event/${e.id}`} className="summary-row">
+                <SportIcon sport={e.sport} size={20} color="#ffffff" />
+                <span className="summary-row-title">{e.title}</span>
+                <span className="summary-row-when">
+                  {formatDay(e.startsAt)} · {formatTime(e.startsAt)}
+                </span>
+              </Link>
+            ))
+          )}
+        </div>
+      </section>
+
+      <FilterBar
+        location={geo.location}
+        onRequestLocation={geo.request}
+        geoPending={geo.status === 'pending'}
+        events={events}
+        hideSearch
+      />
 
       <div className="list-toolbar" data-tour="list">
         <span className="muted">{loading ? 'Загрузка…' : `Найдено: ${visible.length}`}</span>
