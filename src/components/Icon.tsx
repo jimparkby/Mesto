@@ -1,6 +1,7 @@
 import {
   CalendarBlank,
   CaretRight,
+  Chat,
   ChartBar,
   CheckCircle,
   Clock,
@@ -32,6 +33,7 @@ import {
  */
 const ICONS = {
   home: House,
+  chat: Chat,
   events: CalendarBlank,
   map: MapTrifold,
   plus: Plus,

@@ -6,6 +6,7 @@ import { Layout } from './components/Layout';
 import { LoginSheet } from './components/LoginSheet';
 import { Onboarding } from './components/Onboarding';
 import { AdminPage } from './pages/AdminPage';
+import { ChatPage } from './pages/ChatPage';
 import { CreateEventPage } from './pages/CreateEventPage';
 import { EventPage } from './pages/EventPage';
 import { HomePage } from './pages/HomePage';
@@ -96,6 +97,7 @@ export function App() {
                     <Route index element={<MainPage />} />
                     <Route path="events" element={<HomePage />} />
                     <Route path="map" element={<MapPage />} />
+                    <Route path="chat" element={<ChatPage />} />
                     <Route path="create" element={<CreateEventPage />} />
                     <Route path="profile" element={<ProfilePage />} />
                     <Route path="event/:id" element={<EventPage />} />

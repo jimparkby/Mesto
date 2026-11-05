@@ -1,19 +1,6 @@
-import {
-  Backpack,
-  Barbell,
-  Basketball,
-  CaretDown,
-  ChartBar,
-  MagnifyingGlass,
-  Mountains,
-  Volleyball,
-} from '@phosphor-icons/react';
+import { Basketball, MagnifyingGlass, Mountains, Volleyball } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 
-/**
- * Главная страница макета: приветствие, крупное фото (заголовок и чипсы поверх него),
- * блоки ниже — объявление о тренере и два спортивных объявления, кнопка на ленту событий.
- */
 export function MainPage() {
   return (
     <div className="st-page">
@@ -26,10 +13,7 @@ export function MainPage() {
         <img className="st-hero-img" src="basket.jpg" alt="" />
         <h1 className="st-title">
           Найди свою спортивную{' '}
-          <span className="st-accent">
-            Компанию
-            <CaretDown weight="fill" size={20} className="st-caret" />
-          </span>
+          <span className="st-accent">Компанию</span>
         </h1>
         <div className="st-chips">
           <button type="button" className="st-chip st-chip-icon" aria-label="Поиск">
@@ -37,19 +21,16 @@ export function MainPage() {
           </button>
           <button type="button" className="st-chip">
             <Mountains weight="fill" size={13} />
-            Slopes
+            Горные лыжи
           </button>
           <button type="button" className="st-chip">
-            <Barbell weight="fill" size={13} />
-            Workouts
+            Тренировки
           </button>
           <button type="button" className="st-chip">
-            <ChartBar weight="fill" size={13} />
-            Stats
+            Статистика
           </button>
           <button type="button" className="st-chip">
-            <Backpack weight="fill" size={13} />
-            Gear
+            Инвентарь
           </button>
         </div>
       </section>

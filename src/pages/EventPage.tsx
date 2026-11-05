@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { CaretDown, Share } from '@phosphor-icons/react';
 import { api, type Participant } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
-import { Icon, IconTile, TILE, type IconName } from '../components/Icon';
+import { Icon, IconTile, TILE } from '../components/Icon';
 import { SportIcon } from '../components/SportIcon';
 import { LoginSheet } from '../components/LoginSheet';
 import { MapView } from '../components/MapView';
@@ -15,20 +16,29 @@ import { useToast } from '../state';
 
 const TG_APP_LINK = import.meta.env.VITE_TG_APP_LINK as string | undefined;
 
-function InfoRow({ icon, color, children }: { icon: IconName; color: string; children: ReactNode }) {
-  return (
-    <div className="info-row">
-      <IconTile name={icon} color={color} />
-      <div className="grow">{children}</div>
-    </div>
-  );
-}
-
 function shareUrl(e: SportEvent): string {
-  // Лучше всего делиться ссылкой на Mini App — она откроет событие прямо в Telegram.
   if (TG_APP_LINK) return `${TG_APP_LINK}?startapp=event_${e.id}`;
   const base = location.href.split('#')[0];
   return base.startsWith('http') ? `${base}#/event/${e.id}` : `https://t.me/share?text=${encodeURIComponent(e.title)}`;
+}
+
+interface ExpandableSectionProps {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}
+
+function ExpandableSection({ title, open, onToggle, children }: ExpandableSectionProps) {
+  return (
+    <div className="expandable">
+      <button className={`expandable-header${open ? ' is-open' : ''}`} onClick={onToggle} aria-expanded={open}>
+        <span className="expandable-title">{title}</span>
+        <CaretDown size={18} weight="bold" className="expandable-chevron" />
+      </button>
+      {open && <div className="expandable-body">{children}</div>}
+    </div>
+  );
 }
 
 export function EventPage() {
@@ -39,6 +49,8 @@ export function EventPage() {
   const [people, setPeople] = useState<Participant[]>([]);
   const [busy, setBusy] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
+  const [peopleOpen, setPeopleOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [e, p] = await Promise.all([api.getEvent(id), api.participants(id)]);
@@ -67,8 +79,8 @@ export function EventPage() {
   const meta = sportMeta(event.sport);
   const joined = myEventIds.has(event.id);
   const past = isPast(event);
-  const full = isFull(event);
-  const isOrganizer = user?.id === event.organizerId;
+  const spotsFull = isFull(event);
+  const left = spotsLeft(event);
 
   const join = async (want: boolean) => {
     if (!user) {
@@ -99,14 +111,14 @@ export function EventPage() {
   if (past) cta = { label: 'Событие завершено', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (event.status !== 'published') cta = { label: 'Запись закрыта', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (joined) cta = { label: 'Отменить запись', action: () => join(false), kind: 'btn-ghost' };
-  else if (full) cta = { label: 'Мест нет', action: () => {}, kind: 'btn-ghost', disabled: true };
+  else if (spotsFull) cta = { label: 'Мест нет', action: () => {}, kind: 'btn-ghost', disabled: true };
   else cta = { label: event.price > 0 ? `Записаться · ${formatPrice(event.price)}` : 'Записаться', action: () => join(true), kind: 'btn-primary btn-arrow' };
 
   return (
     <div className="page event-page">
       <div className="event-hero" style={{ background: `linear-gradient(135deg, ${meta.color}, ${meta.color}aa)` }}>
         <span className="event-hero-emoji" aria-hidden>
-          <SportIcon sport={event.sport} size={44} color="#fff" />
+          <SportIcon sport={event.sport} size={48} color="#fff" />
         </span>
         <div className="event-hero-sport">{meta.label}</div>
         <h1 className="event-hero-title">{event.title}</h1>
@@ -117,40 +129,66 @@ export function EventPage() {
         )}
       </div>
 
-      <div className="card info-list">
-        <InfoRow icon="clock" color={TILE.gray}>{formatWhen(event)}</InfoRow>
-        <InfoRow icon="pin" color={TILE.red}>
-          <div>{event.venueName}</div>
-          {event.address && <div className="muted">{event.address}</div>}
-        </InfoRow>
-        <InfoRow icon="wallet" color={TILE.green}>{formatPrice(event.price)}</InfoRow>
-        <InfoRow icon="level" color={TILE.indigo}>{levelLabel(event.level)}</InfoRow>
-        <InfoRow icon="users" color={TILE.blue}>
-          {event.registeredCount} из {event.capacity}
-          {!full && !past && <span className="muted"> · осталось {pluralPlaces(spotsLeft(event))}</span>}
-        </InfoRow>
-        <InfoRow icon="organizer" color={TILE.orange}>
-          Организатор: <b>{event.organizerName || '—'}</b>
-          {isOrganizer && <span className="badge badge-ok"> это вы</span>}
-          {event.sourceUrl && (
-            <div>
-              <button type="button" className="link" onClick={() => platform.openLink(event.sourceUrl!)}>
-                Исходный анонс
-              </button>
-            </div>
-          )}
-        </InfoRow>
+      <div className="widget-row">
+        <div className={`widget widget-time${joined ? ' is-on' : ''}`}>
+          <IconTile name="clock" color={TILE.gray} size={44} />
+          <div className="widget-body">
+            <div className="widget-label">Когда</div>
+            <div className="widget-value">{formatWhen(event)}</div>
+          </div>
+        </div>
+        <div className={`widget widget-place${joined ? ' is-on' : ''}`}>
+          <IconTile name="pin" color={TILE.red} size={44} />
+          <div className="widget-body">
+            <div className="widget-label">Где</div>
+            <div className="widget-value">{event.venueName}</div>
+            {event.address && <div className="widget-sub">{event.address}</div>}
+          </div>
+        </div>
       </div>
 
-      {event.description && (
-        <section className="card">
-          <h2 className="h2">Описание</h2>
-          <p className="prewrap">{event.description}</p>
-        </section>
-      )}
+      <div className="widget-row">
+        <div className={`widget widget-level`}>
+          <IconTile name="level" color={TILE.indigo} size={44} />
+          <div className="widget-body">
+            <div className="widget-label">Уровень</div>
+            <div className="widget-value">{levelLabel(event.level)}</div>
+          </div>
+        </div>
+        <div className={`widget widget-spots${left <= 3 ? ' is-low' : ''}${spotsFull ? ' is-full' : ''}`}>
+          <IconTile name="users" color={TILE.blue} size={44} />
+          <div className="widget-body">
+            <div className="widget-label">Мест</div>
+            <div className="widget-value">{spotsFull ? 'Мест нет' : `Осталось ${pluralPlaces(left)}`}</div>
+          </div>
+        </div>
+      </div>
 
-      <section className="card">
-        <h2 className="h2">Участники · {event.registeredCount}</h2>
+      <div className="card map-card">
+        <MapView events={[event]} center={{ lat: event.lat, lng: event.lng }} zoom={14} className="map-event" />
+        <button className="route-btn" onClick={route}>
+          <Icon name="route" size={20} />
+          Построить маршрут
+        </button>
+      </div>
+
+      <ExpandableSection
+        title="Описание"
+        open={descOpen}
+        onToggle={() => setDescOpen(!descOpen)}
+      >
+        {event.description ? (
+          <p className="prewrap">{event.description}</p>
+        ) : (
+          <p className="muted">Описание не добавлено.</p>
+        )}
+      </ExpandableSection>
+
+      <ExpandableSection
+        title={`Участники · ${event.registeredCount}`}
+        open={peopleOpen}
+        onToggle={() => setPeopleOpen(!peopleOpen)}
+      >
         {people.length === 0 ? (
           <p className="muted">Пока никого — станьте первым!</p>
         ) : (
@@ -164,19 +202,11 @@ export function EventPage() {
             {people.length > 24 && <div className="person more">+{people.length - 24}</div>}
           </div>
         )}
-      </section>
-
-      <section className="card no-pad">
-        <MapView events={[event]} center={{ lat: event.lat, lng: event.lng }} zoom={14} className="map-mini" />
-        <button className="route-btn" onClick={route}>
-          <Icon name="route" size={20} />
-          Построить маршрут
-        </button>
-      </section>
+      </ExpandableSection>
 
       <div className="action-bar">
         <button className="btn btn-ghost btn-round" onClick={share} aria-label="Поделиться">
-          <Icon name="share" size={22} weight="bold" />
+          <Share size={22} weight="bold" />
         </button>
         <button className={`btn ${cta.kind} btn-grow`} disabled={cta.disabled || busy} onClick={cta.action}>
           {busy ? '…' : cta.label}

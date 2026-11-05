@@ -1,17 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api';
 import { EventCard } from '../components/EventCard';
 import { FilterBar } from '../components/FilterBar';
 import { Icon } from '../components/Icon';
-import { SportIcon } from '../components/SportIcon';
-import { formatDay, formatTime, isPast } from '../domain/events';
+import { isPast } from '../domain/events';
 import { applyFilters, countActiveFilters, DEFAULT_FILTERS, sortEvents } from '../domain/filters';
 import { useEvents, useGeolocation } from '../hooks';
 import { useFilters } from '../state';
-
-const WEEK_MS = 7 * 86_400_000;
+import { CaretDown } from '@phosphor-icons/react';
 
 export function HomePage() {
   const { myEventIds } = useAuth();
@@ -24,37 +22,12 @@ export function HomePage() {
     return sortEvents(applyFilters(upcoming, filters, geo.location), sort, geo.location);
   }, [events, filters, sort, geo.location]);
 
-  // При сортировке по времени группируем по дням.
-  const groups = useMemo(() => {
-    if (sort !== 'time') return [{ day: '', items: visible }];
-    const map = new Map<string, typeof visible>();
-    for (const e of visible) {
-      const day = formatDay(e.startsAt);
-      map.set(day, [...(map.get(day) ?? []), e]);
-    }
-    return [...map.entries()].map(([day, items]) => ({ day, items }));
-  }, [visible, sort]);
-
-  // Сводка сверху: все опубликованные предстоящие события, без учёта фильтров.
-  const upcoming = useMemo(
-    () =>
-      events
-        .filter((e) => e.status === 'published' && !isPast(e))
-        .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt)),
-    [events],
-  );
-
-  const weekCount = useMemo(() => {
-    const horizon = Date.now() + WEEK_MS;
-    return upcoming.filter((e) => +new Date(e.startsAt) <= horizon).length;
-  }, [upcoming]);
-
-  const nearest = useMemo(() => upcoming.slice(0, 2), [upcoming]);
-
   const hasFilters = countActiveFilters(filters) > 0 || filters.query !== '';
 
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   return (
-    <div className="page">
+    <div className="page events-page">
       <header className="events-head">
         <div className="events-head-text">
           <h1 className="events-title">События</h1>
@@ -64,62 +37,72 @@ export function HomePage() {
             </span>
           )}
         </div>
-        <Link to="/create" className="btn btn-primary btn-sm events-create">
-          <Icon name="plus" size={16} weight="bold" />
-          Создать
+        <Link to="/create" className="btn btn-primary btn-arrow btn-block events-create">
+          <Icon name="plus" size={20} weight="bold" />
+          Создать событие
         </Link>
       </header>
 
       <div className="search-row">
         <label className="search-box">
-          <Icon name="search" size={20} weight="bold" />
+          <Icon name="search" size={22} weight="bold" />
           <input
             className="input"
             type="search"
-            placeholder="Поиск событий"
+            placeholder="Поиск событий…"
             aria-label="Поиск"
             value={filters.query}
             onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
           />
         </label>
+        <button className="btn-icon" onClick={() => setFiltersOpen(!filtersOpen)} aria-label="Фильтры">
+          <Icon name="filter" size={22} weight="bold" />
+          {hasFilters && <span className="dot">{countActiveFilters(filters)}</span>}
+        </button>
       </div>
 
-      <section className="events-summary">
-        <Icon name="events" size={64} className="summary-deco" />
-        <div className="summary-head">
-          <p className="summary-cap">Тренировок за неделю</p>
-          <p className="summary-num">{weekCount}</p>
-        </div>
-        <div className="summary-next">
-          <p className="summary-cap">Тренировки в ближайшее время</p>
-          {nearest.length === 0 ? (
-            <p className="summary-empty">Пока тренировок нет</p>
-          ) : (
-            nearest.map((e) => (
-              <Link key={e.id} to={`/event/${e.id}`} className="summary-row">
-                <SportIcon sport={e.sport} size={20} color="#ffffff" />
-                <span className="summary-row-title">{e.title}</span>
-                <span className="summary-row-when">
-                  {formatDay(e.startsAt)} · {formatTime(e.startsAt)}
-                </span>
-              </Link>
-            ))
-          )}
-        </div>
-      </section>
+      <div className="quick-chips">
+        <button
+          className={`chip${filters.date === 'today' ? ' is-on' : ''}`}
+          onClick={() => setFilters((f) => ({ ...f, date: f.date === 'today' ? 'all' : 'today' }))}
+        >
+          Сегодня
+        </button>
+        <button
+          className={`chip${filters.radiusKm ? ' is-on' : ''}`}
+          onClick={() => {
+            if (!geo.location) geo.request();
+            setFilters((f) => ({ ...f, radiusKm: f.radiusKm ? null : 3 }));
+          }}
+        >
+          <Icon name="near" size={18} className="chip-icon" />
+          {geo.location ? 'Рядом' : 'Местоположение'}
+        </button>
+        <button className="chip chip-expand" onClick={() => setFiltersOpen(!filtersOpen)}>
+          <CaretDown size={16} weight="bold" />
+          Фильтры
+        </button>
+      </div>
 
-      <FilterBar
-        location={geo.location}
-        onRequestLocation={geo.request}
-        geoPending={geo.status === 'pending'}
-        events={events}
-        hideSearch
-      />
+      {filtersOpen && (
+        <FilterBar
+          location={geo.location}
+          onRequestLocation={geo.request}
+          geoPending={geo.status === 'pending'}
+          events={events}
+          hideSearch
+        />
+      )}
 
-      <div className="list-toolbar" data-tour="list">
-        <span className="muted">{loading ? 'Загрузка…' : `Найдено: ${visible.length}`}</span>
-        <div className="segmented">
-          <button className={sort === 'time' ? 'is-on' : ''} onClick={() => setSort('time')}>
+      <div className="list-toolbar">
+        <span className="muted">
+          {loading ? 'Загрузка…' : `Найдено: ${visible.length}`}
+        </span>
+        <div className="segmented sort-toggle">
+          <button
+            className={sort === 'time' ? 'is-on' : ''}
+            onClick={() => setSort('time')}
+          >
             По времени
           </button>
           <button
@@ -139,7 +122,10 @@ export function HomePage() {
 
       {error && (
         <div className="empty">
-          <p>Не удалось загрузить события: {error}</p>
+          <div className="empty-emoji">
+            <Icon name="search" size={48} />
+          </div>
+          <p>Не удалось загрузить события.</p>
           <button className="btn btn-ghost" onClick={reload}>
             Повторить
           </button>
@@ -149,7 +135,7 @@ export function HomePage() {
       {loading && !events.length && (
         <div className="stack">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="card skeleton" />
+            <div key={i} className="card skeleton tall" />
           ))}
         </div>
       )}
@@ -157,7 +143,7 @@ export function HomePage() {
       {!loading && !error && visible.length === 0 && (
         <div className="empty">
           <div className="empty-emoji">
-            <Icon name="search" size={40} />
+            <Icon name="search" size={48} />
           </div>
           <p>{hasFilters ? 'По этим фильтрам ничего нет.' : 'Пока нет событий.'}</p>
           {hasFilters && (
@@ -168,13 +154,8 @@ export function HomePage() {
         </div>
       )}
 
-      {groups.map((g) => (
-        <section key={g.day || 'all'} className="stack">
-          {g.day && <h2 className="day-title">{g.day}</h2>}
-          {g.items.map((e) => (
-            <EventCard key={e.id} event={e} location={geo.location} joined={myEventIds.has(e.id)} />
-          ))}
-        </section>
+      {visible.map((e) => (
+        <EventCard key={e.id} event={e} location={geo.location} joined={myEventIds.has(e.id)} />
       ))}
     </div>
   );

@@ -5,10 +5,12 @@ import { useAuth } from '../auth/AuthContext';
 import { LoginSheet } from '../components/LoginSheet';
 import { PageHeader } from '../components/PageHeader';
 import { SportIcon } from '../components/SportIcon';
+import { Icon } from '../components/Icon';
 import { MapView } from '../components/MapView';
 import { LEVELS, SPORTS, EVENT_TYPES } from '../domain/sports';
 import type { EventType, LatLng, Level, SportId } from '../domain/types';
 import { useToast } from '../state';
+import { CaretDown } from '@phosphor-icons/react';
 
 function defaultDateTime(): string {
   const d = new Date(Date.now() + 24 * 3600_000);
@@ -18,12 +20,34 @@ function defaultDateTime(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+type Section = 'sport' | 'when' | 'where' | 'more';
+
+interface ExpandableSectionProps {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}
+
+function ExpandableSection({ title, open, onToggle, children }: ExpandableSectionProps) {
+  return (
+    <div className="expandable">
+      <button className={`expandable-header${open ? ' is-open' : ''}`} onClick={onToggle} aria-expanded={open}>
+        <span className="expandable-title">{title}</span>
+        <CaretDown size={18} weight="bold" className="expandable-chevron" />
+      </button>
+      {open && <div className="expandable-body">{children}</div>}
+    </div>
+  );
+}
+
 export function CreateEventPage() {
   const { user, refreshMyEvents } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const [loginOpen, setLoginOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [openSection, setOpenSection] = useState<Section>('sport');
 
   const [sport, setSport] = useState<SportId>('football');
   const [eventType, setEventType] = useState<EventType>('game');
@@ -84,6 +108,10 @@ export function CreateEventPage() {
     }
   };
 
+  const meta = sportMeta(sport);
+  const whenDate = new Date(when);
+  const whenLabel = `${whenDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} · ${whenDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+
   return (
     <div className="page">
       <PageHeader eyebrow="Организатору" title="Новое событие" />
@@ -97,112 +125,167 @@ export function CreateEventPage() {
         </div>
       )}
 
-      <form className="form" onSubmit={submit}>
-        <div className="field">
-          <div className="label">Вид спорта</div>
-          <div className="chips-wrap">
-            {SPORTS.map((s) => (
-              <button
-                type="button"
-                key={s.id}
-                className={`chip${sport === s.id ? ' is-on' : ''}`}
-                onClick={() => setSport(s.id)}
-              >
-                <SportIcon sport={s.id} size={18} color={sport === s.id ? undefined : s.color} />
-                {s.label}
-              </button>
-            ))}
+      <form className="form create-form" onSubmit={submit}>
+        <div className="widget-row">
+          <div className={`widget widget-sport${openSection === 'sport' ? ' is-open' : ''}`} onClick={() => setOpenSection('sport')}>
+            <SportIcon sport={sport} size={40} color={meta.color} />
+            <div className="widget-body">
+              <div className="widget-label">Вид спорта</div>
+              <div className="widget-value">{meta.label}</div>
+            </div>
+            <CaretDown size={20} weight="bold" className="widget-chevron" />
+          </div>
+
+          <div className={`widget widget-when${openSection === 'when' ? ' is-open' : ''}`} onClick={() => setOpenSection('when')}>
+            <Icon className="widget-icon" name="clock" size={40} color="#9e212e" />
+            <div className="widget-body">
+              <div className="widget-label">Когда</div>
+              <div className="widget-value">{whenLabel}</div>
+            </div>
+            <CaretDown size={20} weight="bold" className="widget-chevron" />
+          </div>
+
+          <div className={`widget widget-where${openSection === 'where' ? ' is-open' : ''}`} onClick={() => setOpenSection('where')}>
+            <Icon className="widget-icon" name="pin" size={40} color="#ff3b30" />
+            <div className="widget-body">
+              <div className="widget-label">Где</div>
+              <div className="widget-value">{venueName || 'Не указано'}</div>
+              <div className="widget-sub">{point ? 'Точка на карте отмечена' : 'Нажмите, чтобы выбрать место на карте'}</div>
+            </div>
+            <CaretDown size={20} weight="bold" className="widget-chevron" />
           </div>
         </div>
 
-        <div className="field">
-          <div className="label">Тип события</div>
-          <div className="chips-wrap">
-            {EVENT_TYPES.map((t) => (
-              <button
-                type="button"
-                key={t.id}
-                className={`chip${eventType === t.id ? ' is-on' : ''}`}
-                onClick={() => setEventType(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <label className="field">
-          <span className="label">Название</span>
-          <input className="input" maxLength={120} placeholder="Например: Футбол 5×5 после работы" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </label>
-
-        <div className="grid-2">
-          <label className="field">
-            <span className="label">Дата и время</span>
-            <input className="input" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
-          </label>
-          <label className="field">
-            <span className="label">Длительность</span>
-            <select className="input" value={durationMin} onChange={(e) => setDuration(Number(e.target.value))}>
-              {[30, 45, 60, 90, 120, 150, 180].map((m) => (
-                <option key={m} value={m}>
-                  {m < 60 ? `${m} мин` : `${m / 60} ч`.replace('.5', ',5')}
-                </option>
+        {openSection === 'sport' && (
+          <>
+            <div className="sport-picker">
+            <div className="section-title">Выберите вид спорта</div>
+            <div className="chips-wrap">
+              {SPORTS.map((s) => (
+                <button
+                  type="button"
+                  key={s.id}
+                  className={`chip${sport === s.id ? ' is-on' : ''}`}
+                  onClick={() => setSport(s.id)}
+                >
+                  <SportIcon sport={s.id} size={20} color={sport === s.id ? undefined : s.color} />
+                  {s.label}
+                </button>
               ))}
-            </select>
-          </label>
-        </div>
-
-        <label className="field">
-          <span className="label">Место</span>
-          <input className="input" placeholder="Парк, стадион, спорткомплекс" value={venueName} onChange={(e) => setVenueName(e.target.value)} />
-        </label>
-        <label className="field">
-          <span className="label">Адрес (необязательно)</span>
-          <input className="input" placeholder="ул. Примерная, 1" value={address} onChange={(e) => setAddress(e.target.value)} />
-        </label>
-
-        <div className="field">
-          <span className="label">Точка на карте {point ? '✓' : '— нажмите на карту'}</span>
-          <div className="card no-pad">
-            <MapView pick={{ value: point, onPick: setPoint }} className="map-pick" zoom={11} />
+            </div>
           </div>
-        </div>
+          <label className="field">
+            <span className="label">Название события</span>
+            <input className="input" maxLength={120} placeholder="Например: Футбол 5×5 после работы" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </label>
+        </>
+        )}
 
-        <div className="field">
-          <div className="label">Уровень</div>
-          <div className="chips-wrap">
-            {LEVELS.map((l) => (
-              <button type="button" key={l.id} className={`chip${level === l.id ? ' is-on' : ''}`} onClick={() => setLevel(l.id)}>
-                {l.label}
-              </button>
-            ))}
+        {openSection === 'when' && (
+          <div className="expandable-body">
+            <div className="field">
+              <span className="label">Дата и время</span>
+              <input className="input" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+            </div>
+            <div className="field">
+              <span className="label">Длительность</span>
+              <select className="input" value={durationMin} onChange={(e) => setDuration(Number(e.target.value))}>
+                {[30, 45, 60, 90, 120, 150, 180].map((m) => (
+                  <option key={m} value={m}>
+                    {m < 60 ? `${m} мин` : `${m / 60} ч`.replace('.5', ',5')}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="grid-2">
+        {openSection === 'where' && (
+          <div className="expandable-body">
+            <label className="field">
+              <span className="label">Место</span>
+              <input className="input" placeholder="Парк, стадион, спорткомплекс" value={venueName} onChange={(e) => setVenueName(e.target.value)} />
+            </label>
+            <label className="field">
+              <span className="label">Адрес (необязательно)</span>
+              <input className="input" placeholder="ул. Примерная, 1" value={address} onChange={(e) => setAddress(e.target.value)} />
+            </label>
+            <div className="field">
+              <span className="label">Точка на карте {point ? '✓ отмечена' : '— не выбрана'}</span>
+              <div className="card no-pad map-pick-widget">
+                <MapView pick={{ value: point, onPick: setPoint }} className="map-pick" zoom={11} />
+              </div>
+              {!point && (
+                <button type="button" className="btn btn-ghost btn-block" onClick={() => setOpenSection('where')}>
+                  Указать на карте
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <ExpandableSection
+          title="Ещё параметры (уровень, цена, описание)"
+          open={openSection === 'more'}
+          onToggle={() => setOpenSection('more')}
+        >
+          <div className="field">
+            <div className="label">Тип события</div>
+            <div className="chips-wrap">
+              {EVENT_TYPES.map((t) => (
+                <button
+                  type="button"
+                  key={t.id}
+                  className={`chip${eventType === t.id ? ' is-on' : ''}`}
+                  onClick={() => setEventType(t.id)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="field">
+            <div className="label">Уровень</div>
+            <div className="chips-wrap">
+              {LEVELS.map((l) => (
+                <button type="button" key={l.id} className={`chip${level === l.id ? ' is-on' : ''}`} onClick={() => setLevel(l.id)}>
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid-2">
+            <label className="field">
+              <span className="label">Участников</span>
+              <input className="input" type="number" min={2} max={500} value={capacity} onChange={(e) => setCapacity(Math.max(1, Number(e.target.value) || 1))} />
+            </label>
+            <label className="field">
+              <span className="label">Цена, BYN</span>
+              <input className="input" type="number" min={0} step={1} value={price} onChange={(e) => setPrice(Math.max(0, Number(e.target.value) || 0))} />
+            </label>
+          </div>
+
           <label className="field">
-            <span className="label">Участников</span>
-            <input className="input" type="number" min={2} max={500} value={capacity} onChange={(e) => setCapacity(Math.max(1, Number(e.target.value) || 1))} />
+            <span className="label">Описание</span>
+            <textarea
+              className="input"
+              rows={3}
+              placeholder="Что взять с собой, где встречаемся, какой темп…"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </label>
-          <label className="field">
-            <span className="label">Цена, BYN</span>
-            <input className="input" type="number" min={0} step={1} value={price} onChange={(e) => setPrice(Math.max(0, Number(e.target.value) || 0))} />
-          </label>
-        </div>
+        </ExpandableSection>
 
-        <label className="field">
-          <span className="label">Описание</span>
-          <textarea
-            className="input"
-            rows={4}
-            placeholder="Что взять с собой, где встречаемся, какой темп…"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
+        {errors.length > 0 && (
+          <div className="error-banner">
+            {errors.map((e) => `Укажите ${e}`).join(', ')}
+          </div>
+        )}
 
-        <button className="btn btn-primary btn-arrow btn-block" disabled={busy}>
+        <button className="btn btn-primary btn-arrow btn-block" disabled={busy || errors.length > 0 || !point}>
           {busy ? 'Публикуем…' : 'Опубликовать'}
         </button>
       </form>
@@ -210,4 +293,8 @@ export function CreateEventPage() {
       <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} reason="Войдите, чтобы создать событие" />
     </div>
   );
+}
+
+function sportMeta(id: SportId) {
+  return SPORTS.find((s) => s.id === id) ?? SPORTS[0];
 }
