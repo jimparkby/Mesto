@@ -5,8 +5,8 @@ import { Icon, type IconName } from './Icon';
 
 const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Главная', icon: 'home' },
-  { to: '/events', label: 'События', icon: 'events' },
   { to: '/create', label: 'Создать', icon: 'plus' },
+  { to: '/events', label: 'События', icon: 'events' },
   { to: '/map', label: 'Карта', icon: 'map' },
   { to: '/profile', label: 'Профиль', icon: 'user' },
 ];
@@ -51,15 +51,15 @@ export function Layout() {
               end
               data-tour={t.to === '/map' ? 'tab-map' : t.to === '/create' ? 'tab-create' : undefined}
               className={({ isActive }) =>
-                `tab${t.to === '/create' ? ' tab-fab' : ''}${isActive ? ' is-active' : ''}`
+                `tab${t.to === '/events' ? ' tab-fab' : ''}${isActive ? ' is-active' : ''}`
               }
               onClick={() => platform.haptic('selection')}
             >
               {({ isActive }) => (
                 <>
                   <span className="tab-icon">
-                    {t.to === '/create' ? (
-                      <Icon name="plus" size={22} weight="bold" />
+                    {t.to === '/events' ? (
+                      <Icon name={t.icon} size={22} weight="bold" />
                     ) : (
                       <Icon name={t.icon} size={24} weight={isActive ? 'fill' : 'regular'} />
                     )}
