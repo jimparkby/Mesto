@@ -24,6 +24,8 @@ interface EventRow {
   status: SportEvent['status'];
   created_at: string;
   source_url: string | null;
+  /** Встраивается в getEvent: profiles по organizer_id. */
+  organizer?: { username: string | null } | null;
 }
 
 interface ProfileRow {
@@ -57,6 +59,7 @@ function toEvent(r: EventRow): SportEvent {
     registeredCount: r.registered_count,
     organizerId: r.organizer_id ?? '',
     organizerName: r.organizer_name,
+    organizerUsername: r.organizer?.username ?? null,
     status: r.status,
     createdAt: r.created_at,
     sourceUrl: r.source_url,
@@ -74,6 +77,20 @@ function toUser(p: ProfileRow): AppUser {
     provider: p.telegram_id ? 'telegram' : 'guest',
     about: { bio: p.bio ?? '', sports: p.fav_sports ?? [], level: p.skill_level ?? 'any' },
   };
+}
+
+/** Технические ответы PostgREST/Postgres → понятный текст для тоста. */
+function friendlyError(err: { message: string; code?: string }): string {
+  const m = err.message ?? '';
+  if (err.code === 'PGRST204' || /schema cache/i.test(m))
+    return 'Сервер обновляется. Попробуйте ещё раз через минуту.';
+  if (err.code === '42501' || /row-level security|permission denied/i.test(m))
+    return 'Нет прав на это действие. Войдите заново и попробуйте ещё раз.';
+  if (err.code === '23514' || /violates check constraint/i.test(m))
+    return 'Проверьте поля: название от 3 символов, длительность от 15 минут, участников от 1.';
+  if (/JWT|token/i.test(m)) return 'Сессия истекла. Войдите заново.';
+  if (/Failed to fetch|NetworkError|network/i.test(m)) return 'Нет связи с сервером. Проверьте интернет.';
+  return m || 'Что-то пошло не так. Попробуйте ещё раз.';
 }
 
 function check<T>(res: { data: T | null; error: { message: string } | null }): T {
@@ -181,35 +198,46 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
     },
 
     async getEvent(id) {
-      const { data, error } = await sb.from('events').select('*').eq('id', id).maybeSingle<EventRow>();
-      if (error) throw new Error(error.message);
-      return data ? toEvent(data) : null;
+      // Вместе с событием берём @username организатора — чтобы ему можно было написать в Telegram.
+      let res = await sb
+        .from('events')
+        .select('*, organizer:profiles(username)')
+        .eq('id', id)
+        .maybeSingle<EventRow>();
+      if (res.error) res = await sb.from('events').select('*').eq('id', id).maybeSingle<EventRow>();
+      if (res.error) throw new Error(friendlyError(res.error));
+      return res.data ? toEvent(res.data) : null;
     },
 
     async createEvent(input, organizer) {
-      const row = check(
-        await sb
-          .from('events')
-          .insert({
-            title: input.title,
-            sport: input.sport,
-            event_type: input.eventType,
-            description: input.description,
-            starts_at: input.startsAt,
-            duration_min: input.durationMin,
-            venue_name: input.venueName,
-            address: input.address,
-            lat: input.lat,
-            lng: input.lng,
-            level: input.level,
-            price: input.price,
-            capacity: input.capacity,
-            organizer_id: organizer.id,
-            organizer_name: organizer.name,
-          })
-          .select('*')
-          .single<EventRow>(),
-      );
+      const base = {
+        title: input.title,
+        sport: input.sport,
+        description: input.description,
+        starts_at: input.startsAt,
+        duration_min: input.durationMin,
+        venue_name: input.venueName,
+        address: input.address,
+        lat: input.lat,
+        lng: input.lng,
+        level: input.level,
+        price: input.price,
+        capacity: input.capacity,
+        organizer_id: organizer.id,
+        organizer_name: organizer.name,
+      };
+      const insert = (values: Record<string, unknown>) =>
+        sb.from('events').insert(values).select('*').single<EventRow>();
+
+      let res = await insert({ ...base, event_type: input.eventType });
+      // База без миграции event_type (PGRST204 «Could not find the 'event_type' column»):
+      // публикуем без типа, чтобы создание события не ломалось.
+      if (res.error && (res.error.code === 'PGRST204' || /event_type/.test(res.error.message))) {
+        console.warn('events.event_type отсутствует в БД — примените миграцию 20261019000000_event_type.sql');
+        res = await insert(base);
+      }
+      if (res.error) throw new Error(friendlyError(res.error));
+      const row = check(res);
       // registered_count обновил триггер авторегистрации организатора — перечитываем.
       return (await this.getEvent(row.id)) ?? toEvent(row);
     },

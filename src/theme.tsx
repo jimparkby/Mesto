@@ -16,10 +16,10 @@ function applyScheme(scheme: Scheme): Scheme {
   return scheme;
 }
 
-/** Синхронный отклик до первого рендера: по умолчанию белая; тёмная — только явный выбор. */
+/** Синхронный отклик до первого рендера: по умолчанию тёмная; светлая — только явный выбор. */
 export function applyStoredThemeSync() {
   const v = localStorage.getItem(THEME_KEY);
-  applyScheme(v === 'dark' ? 'dark' : 'light');
+  applyScheme(v === 'light' ? 'light' : 'dark');
 }
 
 interface ThemeState {
@@ -32,23 +32,23 @@ interface ThemeState {
 const ThemeCtx = createContext<ThemeState | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>('light');
+  const [mode, setModeState] = useState<ThemeMode>('dark');
   const [system, setSystem] = useState<Scheme>(() => platform.systemScheme());
-  const [scheme, setScheme] = useState<Scheme>(() => (localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'));
+  const [scheme, setScheme] = useState<Scheme>(() => (localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'));
 
   // Смена системной темы / темы Telegram — учитываем только если пользователь выбрал «Система».
   useEffect(() => platform.onSystemSchemeChange(() => setSystem(platform.systemScheme())), []);
 
-  // Восстановление выбора пользователя: без явного «dark» всегда белая.
+  // Восстановление выбора пользователя: без явного «light» всегда тёмная.
   useEffect(() => {
     platform
       .storageGet(THEME_KEY)
-      .then((v) => setModeState(v === 'dark' || v === 'light' ? v : 'light'))
+      .then((v) => setModeState(v === 'dark' || v === 'light' ? v : 'dark'))
       .catch(() => {});
   }, []);
 
   useLayoutEffect(() => {
-    setScheme(applyScheme(mode === 'system' ? system : mode === 'dark' ? 'dark' : 'light'));
+    setScheme(applyScheme(mode === 'system' ? system : mode === 'light' ? 'light' : 'dark'));
   }, [mode, system]);
 
   const setMode = useCallback((m: ThemeMode) => {

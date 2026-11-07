@@ -227,7 +227,7 @@ export function MapView({ events = [], selectedId, onSelect, userLocation, pick,
     if (pickValue) {
       const el = document.createElement('div');
       el.className = 'map-pin is-selected';
-      el.style.setProperty('--pin', '#9e212e');
+      el.style.setProperty('--pin', '#14b8b8');
       el.innerHTML = PICK_GLYPH;
       pickMarkerRef.current = new m.lib.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([pickValue.lng, pickValue.lat])

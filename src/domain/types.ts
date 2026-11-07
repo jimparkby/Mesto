@@ -35,6 +35,8 @@ export interface SportEvent {
   registeredCount: number;
   organizerId: string;
   organizerName: string;
+  /** @username организатора в Telegram (без @), если есть — чтобы ему написать. */
+  organizerUsername?: string | null;
   status: EventStatus;
   createdAt: string;
   /** Ссылка на исходный анонс, если событие импортировано из Telegram/Instagram/сайта. */

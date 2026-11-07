@@ -7,6 +7,7 @@ import { PageHeader } from '../components/PageHeader';
 import { SportIcon } from '../components/SportIcon';
 import { Icon } from '../components/Icon';
 import { MapView } from '../components/MapView';
+import { scaleFor, withDivisionTag } from '../domain/levels';
 import { LEVELS, SPORTS, EVENT_TYPES } from '../domain/sports';
 import type { EventType, LatLng, Level, SportId } from '../domain/types';
 import { useToast } from '../state';
@@ -59,6 +60,8 @@ export function CreateEventPage() {
   const [address, setAddress] = useState('');
   const [point, setPoint] = useState<LatLng | null>(null);
   const [level, setLevel] = useState<Level>('any');
+  /** Метка дивизиона («Д3») — только у видов спорта с официальной шкалой (волейбол). */
+  const [division, setDivision] = useState<string | null>(null);
   const [price, setPrice] = useState(0);
   const [capacity, setCapacity] = useState(10);
 
@@ -82,7 +85,7 @@ export function CreateEventPage() {
     try {
       const created = await api.createEvent(
         {
-          title: title.trim(),
+          title: withDivisionTag(title.trim(), sport, division),
           sport,
           eventType,
           description: description.trim(),
@@ -109,6 +112,8 @@ export function CreateEventPage() {
   };
 
   const meta = sportMeta(sport);
+  // Дивизионы вместо «Новичок/Продвинутый» — там, где по ним реально собирают игры (волейбол: Д1–Д5).
+  const divisionScale = sport === 'volleyball' ? scaleFor(sport) : undefined;
   const whenDate = new Date(when);
   const whenLabel = `${whenDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} · ${whenDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
 
@@ -137,7 +142,7 @@ export function CreateEventPage() {
           </div>
 
           <div className={`widget widget-when${openSection === 'when' ? ' is-open' : ''}`} onClick={() => setOpenSection('when')}>
-            <Icon className="widget-icon" name="clock" size={40} color="#9e212e" />
+            <Icon className="widget-icon" name="clock" size={40} color="#5ee7e3" />
             <div className="widget-body">
               <div className="widget-label">Когда</div>
               <div className="widget-value">{whenLabel}</div>
@@ -166,7 +171,11 @@ export function CreateEventPage() {
                   type="button"
                   key={s.id}
                   className={`chip${sport === s.id ? ' is-on' : ''}`}
-                  onClick={() => setSport(s.id)}
+                  onClick={() => {
+                    setSport(s.id);
+                    setDivision(null);
+                    setLevel('any');
+                  }}
                 >
                   <SportIcon sport={s.id} size={20} color={sport === s.id ? undefined : s.color} />
                   {s.label}
@@ -178,6 +187,48 @@ export function CreateEventPage() {
             <span className="label">Название события</span>
             <input className="input" maxLength={120} placeholder="Например: Футбол 5×5 после работы" value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
+          <div className="field">
+            <div className="label">{divisionScale ? `Уровень · ${divisionScale.title}` : 'Уровень'}</div>
+            <div className="chips-wrap">
+              <button
+                type="button"
+                className={`chip${level === 'any' && !division ? ' is-on' : ''}`}
+                onClick={() => {
+                  setLevel('any');
+                  setDivision(null);
+                }}
+              >
+                Любой
+              </button>
+              {divisionScale
+                ? divisionScale.divisions.map((d) => (
+                    <button
+                      type="button"
+                      key={d.tag}
+                      title={d.label}
+                      className={`chip${division === d.tag ? ' is-on' : ''}`}
+                      onClick={() => {
+                        setDivision(d.tag);
+                        setLevel(d.level);
+                      }}
+                    >
+                      {d.tag}
+                    </button>
+                  ))
+                : LEVELS.filter((l) => l.id !== 'any').map((l) => (
+                    <button type="button" key={l.id} className={`chip${level === l.id ? ' is-on' : ''}`} onClick={() => setLevel(l.id)}>
+                      {l.label}
+                    </button>
+                  ))}
+            </div>
+            {divisionScale && (
+              <span className="hint">
+                {division
+                  ? divisionScale.divisions.find((d) => d.tag === division)?.label
+                  : 'Д1 — сильнейший, Д5 — новички'}
+              </span>
+            )}
+          </div>
         </>
         )}
 
@@ -225,7 +276,7 @@ export function CreateEventPage() {
         )}
 
         <ExpandableSection
-          title="Ещё параметры (уровень, цена, описание)"
+          title="Ещё параметры (тип, цена, описание)"
           open={openSection === 'more'}
           onToggle={() => setOpenSection('more')}
         >
@@ -240,17 +291,6 @@ export function CreateEventPage() {
                   onClick={() => setEventType(t.id)}
                 >
                   {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="field">
-            <div className="label">Уровень</div>
-            <div className="chips-wrap">
-              {LEVELS.map((l) => (
-                <button type="button" key={l.id} className={`chip${level === l.id ? ' is-on' : ''}`} onClick={() => setLevel(l.id)}>
-                  {l.label}
                 </button>
               ))}
             </div>
@@ -278,6 +318,22 @@ export function CreateEventPage() {
             />
           </label>
         </ExpandableSection>
+
+        {user && (
+          <div className="card organizer-card">
+            <div className="organizer-body">
+              <div className="widget-label">Организатор</div>
+              <div className="organizer-name">{user.name}</div>
+              {user.username ? (
+                <div className="organizer-handle">@{user.username} — участники смогут написать вам в Telegram</div>
+              ) : (
+                <div className="organizer-handle muted">
+                  Нет username в Telegram — участникам будет не написать. Войдите через Telegram или укажите контакт в описании.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {errors.length > 0 && (
           <div className="error-banner">

@@ -373,3 +373,18 @@ export function divisionTagsIn(title: string, sport: SportId): string[] {
   }
   return [...out];
 }
+
+/** Подпись уровня события: для волейбола — дивизион из заголовка («Д3», «Д3–Д4»), иначе общая шкала. */
+export function eventLevelLabel(e: { title: string; sport: SportId; level: Level }, generic: (l: Level) => string): string {
+  const tags = divisionTagsIn(e.title, e.sport).sort();
+  if (tags.length === 1) return tags[0]!;
+  if (tags.length > 1) return `${tags[0]}–${tags[tags.length - 1]}`;
+  return generic(e.level);
+}
+
+/** Добавить метку дивизиона в заголовок, если её там ещё нет («Волейбол 6×6» → «Волейбол 6×6 · Д3»). */
+export function withDivisionTag(title: string, sport: SportId, tag: string | null): string {
+  if (!tag || sport !== 'volleyball') return title;
+  if (divisionTagsIn(title, sport).includes(tag)) return title;
+  return `${title} · ${tag}`;
+}

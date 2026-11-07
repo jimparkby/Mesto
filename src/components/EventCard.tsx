@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { distanceKm, formatDistance, formatPrice, formatWhen, isFull, pluralPlaces, spotsLeft } from '../domain/events';
+import { eventLevelLabel } from '../domain/levels';
 import { eventTypeLabel, levelLabel, sportMeta } from '../domain/sports';
 import type { LatLng, SportEvent } from '../domain/types';
 import { Icon } from './Icon';
@@ -45,7 +46,7 @@ export function EventCard({ event: e, location, joined, compact }: Props) {
         </div>
         {!compact && (
           <div className="event-card-footer">
-            <span className="chip-sm">{levelLabel(e.level)}</span>
+            <span className="chip-sm">{eventLevelLabel(e, levelLabel)}</span>
             <span className={`chip-sm${e.price === 0 ? ' chip-free' : ''}`}>{formatPrice(e.price)}</span>
             <span className={`spots${isFull(e) ? ' is-full' : left <= 3 ? ' is-low' : ''}`}>
               {isFull(e) ? 'Мест нет' : `Осталось ${pluralPlaces(left)}`}

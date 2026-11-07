@@ -9,6 +9,7 @@ import { SportIcon } from '../components/SportIcon';
 import { LoginSheet } from '../components/LoginSheet';
 import { MapView } from '../components/MapView';
 import { formatPrice, formatWhen, isFull, isPast, pluralPlaces, spotsLeft } from '../domain/events';
+import { eventLevelLabel } from '../domain/levels';
 import { levelLabel, sportMeta } from '../domain/sports';
 import type { SportEvent } from '../domain/types';
 import { platform } from '../platforms';
@@ -105,6 +106,8 @@ export function EventPage() {
       .then(() => platform.kind === 'web' && toast('Ссылка скопирована'))
       .catch(() => {});
 
+  const writeOrganizer = () => platform.openLink(`https://t.me/${event.organizerUsername}`);
+
   const route = () => platform.openLink(`https://yandex.by/maps/?rtext=~${event.lat},${event.lng}&rtt=auto`);
 
   let cta: { label: string; action: () => void; kind: string; disabled?: boolean };
@@ -127,6 +130,31 @@ export function EventPage() {
             <Icon name="check" size={14} /> Вы идёте
           </span>
         )}
+      </div>
+
+      <div className="card organizer-card">
+        <Avatar name={event.organizerName || 'Организатор'} size={44} />
+        <div className="organizer-body">
+          <div className="widget-label">Организатор</div>
+          <div className="organizer-name">{event.organizerName || 'Не указан'}</div>
+          {event.organizerUsername ? (
+            <div className="organizer-handle">@{event.organizerUsername}</div>
+          ) : event.sourceUrl ? (
+            <div className="organizer-handle muted">Событие из внешнего анонса</div>
+          ) : (
+            <div className="organizer-handle muted">Telegram не указан</div>
+          )}
+        </div>
+        {event.organizerUsername ? (
+          <button className="btn btn-primary organizer-write" onClick={writeOrganizer}>
+            <Icon name="chat" size={18} />
+            Написать
+          </button>
+        ) : event.sourceUrl ? (
+          <button className="btn btn-ghost organizer-write" onClick={() => platform.openLink(event.sourceUrl!)}>
+            Анонс
+          </button>
+        ) : null}
       </div>
 
       <div className="widget-row">
@@ -152,7 +180,7 @@ export function EventPage() {
           <IconTile name="level" color={TILE.indigo} size={44} />
           <div className="widget-body">
             <div className="widget-label">Уровень</div>
-            <div className="widget-value">{levelLabel(event.level)}</div>
+            <div className="widget-value">{eventLevelLabel(event, levelLabel)}</div>
           </div>
         </div>
         <div className={`widget widget-spots${left <= 3 ? ' is-low' : ''}${spotsFull ? ' is-full' : ''}`}>

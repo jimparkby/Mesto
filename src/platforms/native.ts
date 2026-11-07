@@ -10,7 +10,7 @@ const THEME_STORAGE_KEY = 'theme:v1';
 
 function applyStatusBar(scheme: 'light' | 'dark') {
   StatusBar.setStyle({ style: scheme === 'dark' ? Style.Dark : Style.Light }).catch(() => {});
-  StatusBar.setBackgroundColor({ color: scheme === 'dark' ? '#140a0c' : '#ffffff' }).catch(() => {});
+  StatusBar.setBackgroundColor({ color: scheme === 'dark' ? '#0d0e10' : '#f3f5f6' }).catch(() => {});
 }
 
 /** Android-оболочка на Capacitor. */

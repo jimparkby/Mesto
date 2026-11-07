@@ -50,10 +50,10 @@ const CLOUD_TIMEOUT_MS = 1500;
 /** Дубль ключа из src/theme.tsx (без импорта, чтобы не зацикливать платформу и тему). */
 const THEME_STORAGE_KEY = 'theme:v1';
 
-/** Явный выбор пользователя: dark — только если выбрано; иначе белая (не тема Telegram). */
+/** Явный выбор пользователя: light — только если выбрано; иначе тёмная (не тема Telegram). */
 function storedSchemeOverride(): 'light' | 'dark' {
   const v = localStorage.getItem(THEME_STORAGE_KEY);
-  return v === 'dark' ? 'dark' : 'light';
+  return v === 'light' ? 'light' : 'dark';
 }
 
 /** CloudStorage принимает ключи только из A-Z, a-z, 0-9, _ и -. */
@@ -84,7 +84,7 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       const applyChrome = () => {
         const scheme = storedSchemeOverride();
         document.documentElement.dataset.scheme = scheme;
-        const bg = scheme === 'dark' ? '#140a0c' : '#ffffff';
+        const bg = scheme === 'dark' ? '#0d0e10' : '#f3f5f6';
         if (tg.isVersionAtLeast('6.1')) {
           tg.setHeaderColor?.(bg);
           tg.setBackgroundColor?.(bg);
@@ -154,7 +154,7 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       return () => tg.offEvent?.('themeChanged', cb);
     },
     setAppScheme(scheme) {
-      const bg = scheme === 'dark' ? '#140a0c' : '#ffffff';
+      const bg = scheme === 'dark' ? '#0d0e10' : '#f3f5f6';
       if (!tg.isVersionAtLeast('6.1')) return;
       tg.setHeaderColor?.(bg);
       tg.setBackgroundColor?.(bg);

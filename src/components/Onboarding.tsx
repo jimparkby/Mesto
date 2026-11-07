@@ -67,7 +67,7 @@ export function Onboarding({ onDone }: Props) {
           <div className="onb-tiles">
             {LAUNCH_TILES.map((t, i) => (
               <div key={t} className={`onb-tile${i === 4 ? ' is-hero' : ''}`}>
-                <SportIcon sport={t} size={48} color={i === 4 ? '#6c151e' : '#f5dabf'} />
+                <SportIcon sport={t} size={48} color={i === 4 ? '#061416' : '#5ee7e3'} />
               </div>
             ))}
           </div>
@@ -108,7 +108,7 @@ export function Onboarding({ onDone }: Props) {
           {SLIDES.map((s, i) => (
             <section key={s.title} className="onb-slide" aria-hidden={i !== slide}>
               <div className="glass-tile" aria-hidden>
-                <s.Glyph size={88} weight="fill" color="#9e212e" />
+                <s.Glyph size={88} weight="fill" color="#0b5f66" />
                 <span className="glass-tile-badge">
                   <s.Badge size={26} weight="fill" color="#fff" />
                 </span>

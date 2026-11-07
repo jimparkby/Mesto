@@ -13,7 +13,7 @@ function showFatal(message: string) {
   if (!root || root.childElementCount > 0) return;
   root.innerHTML = '';
   const pre = document.createElement('pre');
-  pre.style.cssText = 'padding:16px;white-space:pre-wrap;font:13px/1.4 monospace;color:#9e212e';
+  pre.style.cssText = 'padding:16px;white-space:pre-wrap;font:13px/1.4 monospace;color:#d93a30';
   pre.textContent = `Не удалось запустить приложение:\n${message}`;
   root.appendChild(pre);
 }

@@ -147,6 +147,7 @@ export function createDemoBackend(): Backend {
         registeredCount: 0,
         organizerId: organizer.id,
         organizerName: organizer.name,
+        organizerUsername: organizer.username ?? null,
         status: 'published',
         createdAt: new Date().toISOString(),
       };
