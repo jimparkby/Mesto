@@ -27,10 +27,12 @@ export function ProfilePage() {
   const [tab, setTab] = useState<'upcoming' | 'mine' | 'past'>('upcoming');
 
   const lists = useMemo(() => {
-    const joined = events.filter((e) => myEventIds.has(e.id));
+    // Отменённые события в профиле не показываем и не считаем.
+    const active = events.filter((e) => e.status !== 'cancelled');
+    const joined = active.filter((e) => myEventIds.has(e.id));
     return {
       upcoming: joined.filter((e) => !isPast(e)).sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
-      mine: events.filter((e) => e.organizerId === user?.id).sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+      mine: active.filter((e) => e.organizerId === user?.id).sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
       past: joined.filter((e) => isPast(e)).sort((a, b) => b.startsAt.localeCompare(a.startsAt)),
     };
   }, [events, myEventIds, user?.id]);
