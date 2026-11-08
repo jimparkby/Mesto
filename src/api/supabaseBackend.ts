@@ -25,7 +25,7 @@ interface EventRow {
   created_at: string;
   source_url: string | null;
   /** Встраивается в getEvent: profiles по organizer_id. */
-  organizer?: { username: string | null } | null;
+  organizer?: { username: string | null; is_coach?: boolean } | null;
 }
 
 interface ProfileRow {
@@ -38,6 +38,10 @@ interface ProfileRow {
   bio: string;
   fav_sports: SportId[];
   skill_level: Level;
+  is_coach?: boolean;
+  coach_bio?: string;
+  coach_sports?: SportId[];
+  coach_years?: number;
 }
 
 function toEvent(r: EventRow): SportEvent {
@@ -60,6 +64,7 @@ function toEvent(r: EventRow): SportEvent {
     organizerId: r.organizer_id ?? '',
     organizerName: r.organizer_name,
     organizerUsername: r.organizer?.username ?? null,
+    organizerIsCoach: r.organizer?.is_coach ?? false,
     status: r.status,
     createdAt: r.created_at,
     sourceUrl: r.source_url,
@@ -76,6 +81,7 @@ function toUser(p: ProfileRow): AppUser {
     role: p.role,
     provider: p.telegram_id ? 'telegram' : 'guest',
     about: { bio: p.bio ?? '', sports: p.fav_sports ?? [], level: p.skill_level ?? 'any' },
+    coach: p.is_coach ? { bio: p.coach_bio ?? '', sports: p.coach_sports ?? [], years: p.coach_years ?? 0 } : null,
   };
 }
 
@@ -186,22 +192,41 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
       return { ...user, about };
     },
 
+    async updateCoach(user, coach) {
+      const { error } = await sb
+        .from('profiles')
+        .update(
+          coach
+            ? { is_coach: true, coach_bio: coach.bio, coach_sports: coach.sports, coach_years: coach.years }
+            : { is_coach: false },
+        )
+        .eq('id', user.id);
+      if (error) throw new Error(friendlyError(error));
+      return { ...user, coach };
+    },
+
     async listEvents(opts) {
-      let q = sb
-        .from('events')
-        .select('*')
-        .gte('starts_at', new Date(Date.now() - 12 * 3600_000).toISOString())
-        .order('starts_at')
-        .limit(500);
-      if (!opts?.includeHidden) q = q.eq('status', 'published');
-      return check(await q.returns<EventRow[]>()).map(toEvent);
+      const query = (columns: string) => {
+        let q = sb
+          .from('events')
+          .select(columns)
+          .gte('starts_at', new Date(Date.now() - 12 * 3600_000).toISOString())
+          .order('starts_at')
+          .limit(500);
+        if (!opts?.includeHidden) q = q.eq('status', 'published');
+        return q.returns<EventRow[]>();
+      };
+      // Отметка «Тренер» — из профиля организатора; без миграции coach_profile берём события без неё.
+      let res = await query('*, organizer:profiles(username, is_coach)');
+      if (res.error) res = await query('*');
+      return check(res).map(toEvent);
     },
 
     async getEvent(id) {
       // Вместе с событием берём @username организатора — чтобы ему можно было написать в Telegram.
       let res = await sb
         .from('events')
-        .select('*, organizer:profiles(username)')
+        .select('*, organizer:profiles(username, is_coach)')
         .eq('id', id)
         .maybeSingle<EventRow>();
       if (res.error) res = await sb.from('events').select('*').eq('id', id).maybeSingle<EventRow>();

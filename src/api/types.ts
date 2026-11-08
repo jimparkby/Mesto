@@ -1,4 +1,4 @@
-import type { AboutMe, AppUser, EventStatus, NewEventInput, SportEvent } from '../domain/types';
+import type { AboutMe, AppUser, CoachProfile, EventStatus, NewEventInput, SportEvent } from '../domain/types';
 import type { TelegramUserInfo } from '../platforms';
 
 export interface Participant {
@@ -27,6 +27,8 @@ export interface Backend {
   signInWithTelegramCode(token: string, code: string): Promise<AppUser>;
   signOut(): Promise<void>;
   updateAbout(user: AppUser, about: AboutMe): Promise<AppUser>;
+  /** null — выключить профиль тренера. */
+  updateCoach(user: AppUser, coach: CoachProfile | null): Promise<AppUser>;
 
   // --- events ---
   listEvents(opts?: { includeHidden?: boolean }): Promise<SportEvent[]>;

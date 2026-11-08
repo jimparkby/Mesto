@@ -37,6 +37,8 @@ export interface SportEvent {
   organizerName: string;
   /** @username организатора в Telegram (без @), если есть — чтобы ему написать. */
   organizerUsername?: string | null;
+  /** Организатор включил профиль тренера — показываем отметку «Тренер». */
+  organizerIsCoach?: boolean;
   status: EventStatus;
   createdAt: string;
   /** Ссылка на исходный анонс, если событие импортировано из Telegram/Instagram/сайта. */
@@ -69,6 +71,14 @@ export interface AboutMe {
   level: Level;
 }
 
+/** Профиль тренера: включается в настройках, его события помечаются «Тренер». */
+export interface CoachProfile {
+  bio: string;
+  sports: SportId[];
+  /** Стаж, лет. */
+  years: number;
+}
+
 export interface AppUser {
   id: string;
   name: string;
@@ -78,6 +88,8 @@ export interface AppUser {
   role: 'user' | 'admin';
   provider: AuthProviderKind;
   about?: AboutMe | null;
+  /** null — профиль тренера выключен. */
+  coach?: CoachProfile | null;
 }
 
 export interface LatLng {

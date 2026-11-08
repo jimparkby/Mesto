@@ -126,6 +126,15 @@ export function createDemoBackend(): Backend {
       return next;
     },
 
+    async updateCoach(user, coach) {
+      const next = { ...user, coach };
+      await persistUser(next);
+      const s = load();
+      for (const e of s.events) if (e.organizerId === user.id) e.organizerIsCoach = !!coach;
+      save(s);
+      return next;
+    },
+
     async listEvents(opts) {
       const s = load();
       return s.events
@@ -148,6 +157,7 @@ export function createDemoBackend(): Backend {
         organizerId: organizer.id,
         organizerName: organizer.name,
         organizerUsername: organizer.username ?? null,
+        organizerIsCoach: !!organizer.coach,
         status: 'published',
         createdAt: new Date().toISOString(),
       };

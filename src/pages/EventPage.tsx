@@ -135,7 +135,14 @@ export function EventPage() {
       <div className="card organizer-card">
         <Avatar name={event.organizerName || 'Организатор'} size={44} />
         <div className="organizer-body">
-          <div className="widget-label">Организатор</div>
+          <div className="widget-label">
+            Организатор
+            {event.organizerIsCoach && (
+              <span className="badge badge-coach">
+                <Icon name="coach" size={12} /> Тренер
+              </span>
+            )}
+          </div>
           <div className="organizer-name">{event.organizerName || 'Не указан'}</div>
           {event.organizerUsername ? (
             <div className="organizer-handle">@{event.organizerUsername}</div>

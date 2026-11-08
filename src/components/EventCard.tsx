@@ -29,6 +29,7 @@ export function EventCard({ event: e, location, joined, compact }: Props) {
             {meta.label}
           </span>
           <span className="badge badge-muted">{eventTypeLabel(e.eventType)}</span>
+          {e.organizerIsCoach && <span className="badge badge-coach">Тренер</span>}
           {joined && <span className="badge badge-ok">Вы идёте</span>}
           {e.status !== 'published' && <span className="badge badge-warn">{e.status === 'hidden' ? 'Скрыто' : 'Отменено'}</span>}
         </div>

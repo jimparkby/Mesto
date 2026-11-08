@@ -50,8 +50,9 @@ export function CreateEventPage() {
   const [busy, setBusy] = useState(false);
   const [openSection, setOpenSection] = useState<Section>('sport');
 
-  const [sport, setSport] = useState<SportId>('football');
-  const [eventType, setEventType] = useState<EventType>('game');
+  // Тренер выставляет объявление о тренировке по своему виду спорта.
+  const [sport, setSport] = useState<SportId>(() => user?.coach?.sports[0] ?? 'football');
+  const [eventType, setEventType] = useState<EventType>(() => (user?.coach ? 'training' : 'game'));
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [when, setWhen] = useState(defaultDateTime);
@@ -119,7 +120,10 @@ export function CreateEventPage() {
 
   return (
     <div className="page">
-      <PageHeader eyebrow="Организатору" title="Новое событие" />
+      <PageHeader
+        eyebrow={user?.coach ? 'Тренеру' : 'Организатору'}
+        title={user?.coach ? 'Объявление о тренировке' : 'Новое событие'}
+      />
 
       {!user && (
         <div className="card callout">

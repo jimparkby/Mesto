@@ -12,6 +12,7 @@ import {
   MagnifyingGlass,
   MapPin,
   MapTrifold,
+  Medal,
   Megaphone,
   NavigationArrow,
   PencilSimple,
@@ -57,6 +58,7 @@ const ICONS = {
   close: X,
   edit: PencilSimple,
   dots: DotsThree,
+  coach: Medal,
 } as const;
 
 export type IconName = keyof typeof ICONS;

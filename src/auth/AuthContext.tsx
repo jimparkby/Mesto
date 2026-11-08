@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, type TelegramLoginRequest } from '../api';
-import type { AboutMe, AppUser } from '../domain/types';
+import type { AboutMe, AppUser, CoachProfile } from '../domain/types';
 import { platform } from '../platforms';
 
 interface AuthState {
@@ -15,6 +15,7 @@ interface AuthState {
   signInWithTelegramCode(token: string, code: string): Promise<AppUser>;
   signOut(): Promise<void>;
   updateAbout(about: AboutMe): Promise<void>;
+  updateCoach(coach: CoachProfile | null): Promise<void>;
   refreshMyEvents(): Promise<void>;
   toggleRegistration(eventId: string, join: boolean): Promise<void>;
 }
@@ -96,6 +97,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
+  const updateCoach = useCallback(
+    async (coach: CoachProfile | null) => {
+      if (!user) throw new Error('Нужно войти');
+      setUser(await api.updateCoach(user, coach));
+    },
+    [user],
+  );
+
   const toggleRegistration = useCallback(
     async (eventId: string, join: boolean) => {
       if (!user) throw new Error('Нужно войти');
@@ -123,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithTelegramCode,
       signOut,
       updateAbout,
+      updateCoach,
       refreshMyEvents,
       toggleRegistration,
     }),
@@ -137,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithTelegramCode,
       signOut,
       updateAbout,
+      updateCoach,
       refreshMyEvents,
       toggleRegistration,
     ],
