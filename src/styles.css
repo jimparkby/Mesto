@@ -1,6 +1,6 @@
 /* ===== Тема =====
    Тёмная по умолчанию: графитовый фон с аква-свечением, светлые виджеты, аква-акцент,
-   заголовки узким гротеском (Oswald). Светлая схема — явный выбор в профиле (data-scheme='light'). */
+   везде один шрифт — Inter. Светлая схема — явный выбор в профиле (data-scheme='light'). */
 :root {
   /* Бренд */
   --accent: #5ee7e3;
@@ -10,7 +10,7 @@
     radial-gradient(90% 80% at 0% 100%, rgba(106, 168, 255, 0.4), transparent 60%), #15171a;
   --glow: radial-gradient(60% 45% at 75% 18%, rgba(94, 231, 227, 0.22), transparent 70%),
     radial-gradient(55% 40% at 10% 70%, rgba(106, 168, 255, 0.16), transparent 70%);
-  --font-display: 'Oswald', 'Arial Narrow', 'Inter Variable', sans-serif;
+  --font-display: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   --primary: #5ee7e3; /* текст и иконки акцентного цвета */
   --primary-press: #46d3cf;
@@ -457,6 +457,16 @@ p {
 .badge-muted {
   background: var(--component);
   color: var(--muted);
+}
+.badge-coach {
+  background: rgba(255, 149, 0, 0.16);
+  color: #ff9f0a;
+}
+.widget-label .badge-coach {
+  margin-left: 8px;
+  vertical-align: middle;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .chip-sm {
@@ -2602,7 +2612,7 @@ select.input {
   }
 }
 /* =====================================================================
-   Дизайн 2026-11: графит + аква-свечение, узкие заглавные заголовки (Oswald),
+   Дизайн 2026-11: графит + аква-свечение, плотные жирные заголовки (Inter),
    крупные светлые виджеты с цифрами — по референсу.
    ===================================================================== */
 
@@ -2624,7 +2634,7 @@ body::before {
   z-index: 0;
 }
 
-/* Заголовки — узкий гротеск капсом */
+/* Заголовки — тот же Inter, жирный и плотный */
 .big-title,
 .events-title,
 .event-hero-title,
@@ -2638,14 +2648,13 @@ body::before {
 .home-title,
 .home-section-title {
   font-family: var(--font-display);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.005em;
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 .big-title,
 .events-title {
-  font-size: 40px;
-  line-height: 1;
+  font-size: 34px;
+  line-height: 1.05;
 }
 .event-hero-title {
   line-height: 1.05;

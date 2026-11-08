@@ -4,7 +4,6 @@ import { App } from './App';
 import { platform } from './platforms';
 import { applyStoredThemeSync } from './theme';
 import '@fontsource-variable/inter';
-import '@fontsource-variable/unbounded';
 import './styles.css';
 
 // Если приложение упало до первой отрисовки, показываем текст ошибки вместо белого экрана.
