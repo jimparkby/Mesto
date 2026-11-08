@@ -89,8 +89,10 @@ export function CoachSettingsRow() {
             inputMode="numeric"
             min={0}
             max={60}
-            value={draft.years}
-            onChange={(e) => setDraft((d) => ({ ...d, years: Math.max(0, Math.min(60, Number(e.target.value) || 0)) }))}
+            placeholder="0"
+            // 0 показываем пустым полем — иначе при вводе получается «05».
+            value={draft.years || ''}
+            onChange={(e) => setDraft((d) => ({ ...d, years: Math.max(0, Math.min(60, parseInt(e.target.value, 10) || 0)) }))}
           />
         </label>
         <label className="field">
