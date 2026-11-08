@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Desktop, MoonStars, Sun } from '@phosphor-icons/react';
 import { useAuth } from '../auth/AuthContext';
 import { AboutSection } from '../components/AboutSection';
+import { CoachCard, CoachSettingsRow } from '../components/CoachSection';
 import { Avatar } from '../components/Avatar';
 import { EventCard } from '../components/EventCard';
 import { Icon, IconTile, TILE } from '../components/Icon';
@@ -10,6 +11,7 @@ import { LoginSheet } from '../components/LoginSheet';
 import { isPast } from '../domain/events';
 import { useEvents } from '../hooks';
 import { useTheme, type ThemeMode } from '../theme';
+import { version } from '../../package.json';
 
 const THEME_OPTIONS: { id: ThemeMode; label: string; Glyph: typeof Sun }[] = [
   { id: 'system', label: 'Система', Glyph: Desktop },
@@ -46,6 +48,11 @@ export function ProfilePage() {
         <header className="profile-head">
           <Avatar name={user.name} photoUrl={user.photoUrl} size={88} />
           <h1 className="big-title">{user.name}</h1>
+          {user.coach && (
+            <span className="badge badge-coach">
+              <Icon name="coach" size={12} /> Тренер
+            </span>
+          )}
           <div className="muted">
             {user.username ? `@${user.username} · ` : ''}
             {user.provider === 'telegram' ? 'вход через Telegram' : 'гость'}
@@ -110,6 +117,7 @@ export function ProfilePage() {
       </div>
 
       <AboutSection />
+      <CoachCard />
 
       <section className="card settings">
         <div className="label">Оформление</div>
@@ -123,16 +131,17 @@ export function ProfilePage() {
         </div>
       </section>
 
-      {(user?.role === 'admin' || (user && user.provider !== 'telegram')) && (
+      {user && (
         <section className="card settings">
-          {user?.role === 'admin' && (
+          <CoachSettingsRow />
+          {user.role === 'admin' && (
             <Link to="/admin" className="settings-row">
               <IconTile name="shield" color={TILE.indigo} />
               <span className="grow">Модерация событий</span>
               <Icon name="chevron" size={18} weight="bold" className="muted" />
             </Link>
           )}
-          {user && user.provider !== 'telegram' && (
+          {user.provider !== 'telegram' && (
             <button className="settings-row danger" onClick={signOut}>
               <IconTile name="logout" color={TILE.red} />
               <span className="grow">Выйти</span>
@@ -141,7 +150,7 @@ export function ProfilePage() {
         </section>
       )}
 
-      <p className="footer-note">Mesto · MVP для Space University 2026</p>
+      <p className="footer-note">Mesto {version} · MVP для Space University 2026</p>
 
       <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>
