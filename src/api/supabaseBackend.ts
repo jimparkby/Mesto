@@ -281,7 +281,7 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
 
     async setEventStatus(id, status) {
       const { error } = await sb.from('events').update({ status }).eq('id', id);
-      if (error) throw new Error(error.message);
+      if (error) throw new Error(friendlyError(error));
     },
 
     async myRegistrationIds(userId) {

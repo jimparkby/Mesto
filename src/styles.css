@@ -348,6 +348,11 @@ p {
   gap: 12px;
   background: var(--primary-soft);
 }
+.callout-danger {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+  font-weight: 600;
+}
 
 .event-card {
   display: flex;
@@ -553,6 +558,11 @@ p {
   background: transparent;
   border-color: var(--primary);
   color: var(--primary);
+}
+.btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
 }
 /* Шеврон справа у основных действий */
 .btn-arrow {

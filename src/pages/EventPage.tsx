@@ -7,11 +7,12 @@ import { Avatar } from '../components/Avatar';
 import { Icon, IconTile, TILE } from '../components/Icon';
 import { SportIcon } from '../components/SportIcon';
 import { LoginSheet } from '../components/LoginSheet';
+import { Sheet } from '../components/Sheet';
 import { MapView } from '../components/MapView';
 import { formatPrice, formatWhen, isFull, isPast, pluralPlaces, spotsLeft } from '../domain/events';
 import { eventLevelLabel } from '../domain/levels';
 import { levelLabel, sportMeta } from '../domain/sports';
-import type { SportEvent } from '../domain/types';
+import type { EventStatus, SportEvent } from '../domain/types';
 import { platform } from '../platforms';
 import { useToast } from '../state';
 
@@ -52,6 +53,7 @@ export function EventPage() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
   const [peopleOpen, setPeopleOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [e, p] = await Promise.all([api.getEvent(id), api.participants(id)]);
@@ -100,6 +102,22 @@ export function EventPage() {
     }
   };
 
+  // Организатор (и админ) может отменить своё событие или объявление и вернуть его в ленту.
+  const canManage = !!user && (user.id === event.organizerId || user.role === 'admin');
+  const setStatus = async (status: EventStatus) => {
+    setBusy(true);
+    try {
+      await api.setEventStatus(event.id, status);
+      toast(status === 'cancelled' ? 'Событие отменено' : 'Событие снова в ленте', status === 'cancelled' ? 'info' : 'success');
+      setCancelOpen(false);
+      await load();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const share = () =>
     platform
       .share(shareUrl(event), `${meta.emoji} ${event.title} — ${formatWhen(event)}, ${event.venueName}. Присоединяйся!`)
@@ -112,6 +130,7 @@ export function EventPage() {
 
   let cta: { label: string; action: () => void; kind: string; disabled?: boolean };
   if (past) cta = { label: 'Событие завершено', action: () => {}, kind: 'btn-ghost', disabled: true };
+  else if (event.status === 'cancelled') cta = { label: 'Событие отменено', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (event.status !== 'published') cta = { label: 'Запись закрыта', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (joined) cta = { label: 'Отменить запись', action: () => join(false), kind: 'btn-ghost' };
   else if (spotsFull) cta = { label: 'Мест нет', action: () => {}, kind: 'btn-ghost', disabled: true };
@@ -131,6 +150,12 @@ export function EventPage() {
           </span>
         )}
       </div>
+
+      {event.status === 'cancelled' && (
+        <div className="card callout callout-danger">
+          Организатор отменил {event.eventType === 'training' ? 'тренировку' : 'событие'}.
+        </div>
+      )}
 
       <div className="card organizer-card">
         <Avatar name={event.organizerName || 'Организатор'} size={44} />
@@ -238,6 +263,35 @@ export function EventPage() {
           </div>
         )}
       </ExpandableSection>
+
+      {canManage && !past && (
+        <section className="card settings">
+          {event.status === 'cancelled' ? (
+            <button className="settings-row" disabled={busy} onClick={() => setStatus('published')}>
+              <IconTile name="check" color={TILE.green} />
+              <span className="grow">Вернуть в ленту</span>
+            </button>
+          ) : (
+            <button className="settings-row danger" disabled={busy} onClick={() => setCancelOpen(true)}>
+              <IconTile name="close" color={TILE.red} />
+              <span className="grow">Отменить {event.eventType === 'training' ? 'тренировку' : 'событие'}</span>
+            </button>
+          )}
+        </section>
+      )}
+
+      <Sheet open={cancelOpen} onClose={() => setCancelOpen(false)} title="Отменить событие?">
+        <p className="muted">
+          Оно пропадёт из ленты и с карты, записаться будет нельзя. Участники увидят отметку «Отменено». Вернуть
+          событие в ленту можно здесь же.
+        </p>
+        <button className="btn btn-danger" disabled={busy} onClick={() => setStatus('cancelled')}>
+          {busy ? 'Отменяем…' : 'Да, отменить'}
+        </button>
+        <button className="btn btn-ghost" disabled={busy} onClick={() => setCancelOpen(false)}>
+          Не отменять
+        </button>
+      </Sheet>
 
       <div className="action-bar">
         <button className="btn btn-ghost btn-round" onClick={share} aria-label="Поделиться">
