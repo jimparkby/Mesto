@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AppUser, EventType, Level, SportEvent, SportId } from '../domain/types';
+import type { AppUser, CoachProfile, EventType, Level, SportEvent, SportId } from '../domain/types';
 import { platform } from '../platforms';
 import type { Backend, Participant } from './types';
 
@@ -131,7 +131,13 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
 
   async function loadProfile(id: string): Promise<AppUser> {
     const p = check(await sb.from('profiles').select('*').eq('id', id).single<ProfileRow>());
-    return toUser(p);
+    const user = toUser(p);
+    // База без миграции coach_profile: профиль тренера лежит в user_metadata (см. updateCoach).
+    if (p.is_coach === undefined) {
+      const { data } = await sb.auth.getSession();
+      user.coach = (data.session?.user.user_metadata?.coach as CoachProfile | undefined) ?? null;
+    }
+    return user;
   }
 
   return {
@@ -201,6 +207,12 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
             : { is_coach: false },
         )
         .eq('id', user.id);
+      if (error && (error.code === 'PGRST204' || /is_coach|coach_/.test(error.message))) {
+        console.warn('profiles.is_coach отсутствует в БД — примените миграцию 20261108000000_coach_profile.sql');
+        const res = await sb.auth.updateUser({ data: { coach } });
+        if (res.error) throw new Error(friendlyError(res.error));
+        return { ...user, coach };
+      }
       if (error) throw new Error(friendlyError(error));
       return { ...user, coach };
     },
