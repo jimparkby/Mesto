@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AppUser, CoachProfile, EventType, Level, SportEvent, SportId } from '../domain/types';
+import type { AppUser, CoachProfile, EventType, Level, PublicProfile, RegStatus, SportEvent, SportId } from '../domain/types';
 import { platform } from '../platforms';
 import type { Backend, Participant } from './types';
 
@@ -217,6 +217,22 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
       return { ...user, coach };
     },
 
+    async getProfile(id) {
+      const { data, error } = await sb.from('profiles').select('*').eq('id', id).maybeSingle<ProfileRow>();
+      if (error) throw new Error(friendlyError(error));
+      if (!data) return null;
+      const u = toUser(data);
+      const profile: PublicProfile = {
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        photoUrl: u.photoUrl,
+        about: u.about,
+        coach: u.coach,
+      };
+      return profile;
+    },
+
     async listEvents(opts) {
       const query = (columns: string) => {
         let q = sb
@@ -284,36 +300,62 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
       if (error) throw new Error(friendlyError(error));
     },
 
-    async myRegistrationIds(userId) {
-      const rows = check(
-        await sb.from('registrations').select('event_id').eq('user_id', userId).returns<{ event_id: string }[]>(),
-      );
-      return new Set(rows.map((r) => r.event_id));
+    async myRegistrations(userId) {
+      // База без миграции registration_approval: колонки status нет — все записи считаем принятыми.
+      let res = await sb
+        .from('registrations')
+        .select('event_id, status')
+        .eq('user_id', userId)
+        .returns<{ event_id: string; status?: RegStatus }[]>();
+      if (res.error) res = await sb.from('registrations').select('event_id').eq('user_id', userId).returns<{ event_id: string }[]>();
+      return new Map(check(res).map((r) => [r.event_id, r.status ?? 'approved']));
     },
 
     async register(eventId, user) {
       const { error } = await sb.from('registrations').insert({ event_id: eventId, user_id: user.id });
-      if (error && error.code !== '23505') throw new Error(error.message);
+      if (error && error.code !== '23505') throw new Error(friendlyError(error));
+      const { data } = await sb
+        .from('registrations')
+        .select('status')
+        .eq('event_id', eventId)
+        .eq('user_id', user.id)
+        .maybeSingle<{ status?: RegStatus }>();
+      const status = data?.status ?? 'approved';
+      // Сообщение организатору с профилем участника — уведомление не должно ломать запись.
+      if (status === 'pending' && !error) {
+        sb.functions.invoke('registration-notify', { body: { action: 'new', event_id: eventId } }).catch(() => {});
+      }
+      return status;
     },
 
     async unregister(eventId, user) {
       const { error } = await sb.from('registrations').delete().eq('event_id', eventId).eq('user_id', user.id);
-      if (error) throw new Error(error.message);
+      if (error) throw new Error(friendlyError(error));
+    },
+
+    async decideRegistration(eventId, userId, approve) {
+      const { error } = await sb
+        .from('registrations')
+        .update({ status: approve ? 'approved' : 'rejected' })
+        .eq('event_id', eventId)
+        .eq('user_id', userId);
+      if (error) throw new Error(/Мест/.test(error.message) ? 'Мест больше нет' : friendlyError(error));
+      sb.functions
+        .invoke('registration-notify', { body: { action: 'decided', event_id: eventId, user_id: userId } })
+        .catch(() => {});
     },
 
     async participants(eventId) {
-      const rows = check(
-        await sb
-          .from('registrations')
-          .select('user_id, profiles(name, photo_url)')
-          .eq('event_id', eventId)
-          .order('created_at')
-          .returns<{ user_id: string; profiles: { name: string; photo_url: string | null } | null }[]>(),
-      );
-      return rows.map<Participant>((r) => ({
+      type Row = { user_id: string; status?: RegStatus; profiles: { name: string; photo_url: string | null } | null };
+      const query = (columns: string) =>
+        sb.from('registrations').select(columns).eq('event_id', eventId).order('created_at').returns<Row[]>();
+      let res = await query('user_id, status, profiles(name, photo_url)');
+      if (res.error) res = await query('user_id, profiles(name, photo_url)');
+      return check(res).map<Participant>((r) => ({
         userId: r.user_id,
         name: r.profiles?.name ?? 'Участник',
         photoUrl: r.profiles?.photo_url,
+        status: r.status ?? 'approved',
       }));
     },
   };

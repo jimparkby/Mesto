@@ -2,6 +2,7 @@
 // /start → приветствие и кнопка, открывающая Mini App.
 // /start event_<id> → сразу открывает карточку события.
 // /start login_<token> → код для входа в APK (см. telegram-code-auth).
+// Кнопки «Принять / Отклонить» под заявкой (callback ra:<id> / rr:<id>) → решение организатора.
 //
 // Сообщения из групп-источников (INGEST_GROUPS, см. ingest/config.ts) → импорт событий в ленту.
 //
@@ -17,6 +18,7 @@ import {
   tgApi as tg,
   type TgUser,
 } from '../_shared/telegram.ts';
+import { decideByTelegram, updateOrganizerMessage } from '../_shared/registrations.ts';
 import { config as ingestConfig } from '../ingest/config.ts';
 import { extractEvents } from '../ingest/extract.ts';
 import { dbSearch } from '../ingest/geocode.ts';
@@ -99,12 +101,29 @@ async function ingestGroupMessage(msg: any, edited: boolean) {
   await ingestPosts(createStore(admin), [post], { geoSearch: dbSearch(admin) });
 }
 
+/** Организатор нажал «Принять» или «Отклонить» под заявкой. */
+// deno-lint-ignore no-explicit-any
+async function handleCallback(cq: any) {
+  const m = /^r([ar]):(\d+)$/.exec(String(cq.data ?? ''));
+  if (!m) {
+    await tg('answerCallbackQuery', { callback_query_id: cq.id });
+    return;
+  }
+  const { text, info } = await decideByTelegram(Number(m[2]), m[1] === 'a', cq.from.id);
+  await tg('answerCallbackQuery', { callback_query_id: cq.id, text });
+  if (info && cq.message) await updateOrganizerMessage(cq.message.chat.id, cq.message.message_id, info);
+}
+
 Deno.serve(async (req) => {
   if (WEBHOOK_SECRET && req.headers.get('x-telegram-bot-api-secret-token') !== WEBHOOK_SECRET) {
     return new Response('forbidden', { status: 403 });
   }
 
   const update = await req.json().catch(() => null);
+  if (update?.callback_query) {
+    await handleCallback(update.callback_query).catch((err) => console.error('callback', err));
+    return new Response('ok');
+  }
   const groupMsg = update?.message ?? update?.edited_message;
   if (groupMsg && groupMsg.chat?.type !== 'private') {
     // В группах бот только читает анонсы, команды там не обрабатываем.

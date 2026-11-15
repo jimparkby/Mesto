@@ -1,17 +1,23 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { LevelsInfoSheet } from '../components/LevelsInfoSheet';
 import { LoginSheet } from '../components/LoginSheet';
+import { MapPicker } from '../components/MapPicker';
 import { PageHeader } from '../components/PageHeader';
 import { SportIcon } from '../components/SportIcon';
 import { Icon } from '../components/Icon';
-import { MapView } from '../components/MapView';
+import { distanceKm, formatDistance } from '../domain/events';
+import { geocodeAddress, reverseGeocode, SAME_PLACE_M } from '../domain/geocode';
 import { scaleFor, withDivisionTag } from '../domain/levels';
 import { LEVELS, SPORTS, EVENT_TYPES } from '../domain/sports';
 import type { EventType, LatLng, Level, SportId } from '../domain/types';
 import { useToast } from '../state';
-import { CaretDown } from '@phosphor-icons/react';
+import { CaretDown, Info } from '@phosphor-icons/react';
+
+/** Поиск координат по адресу: идёт, нашли, не нашли. */
+type AddressLookup = { state: 'idle' } | { state: 'searching' } | { state: 'found'; point: LatLng } | { state: 'missing' };
 
 function defaultDateTime(): string {
   const d = new Date(Date.now() + 24 * 3600_000);
@@ -59,18 +65,87 @@ export function CreateEventPage() {
   const [durationMin, setDuration] = useState(90);
   const [venueName, setVenueName] = useState('');
   const [address, setAddress] = useState('');
+  /** Точка, отмеченная на карте вручную. */
   const [point, setPoint] = useState<LatLng | null>(null);
+  /** Адрес подставлен по точке — сверять его с точкой не нужно. */
+  const [addressFromPoint, setAddressFromPoint] = useState(false);
+  const [lookup, setLookup] = useState<AddressLookup>({ state: 'idle' });
+  const [levelsOpen, setLevelsOpen] = useState(false);
   const [level, setLevel] = useState<Level>('any');
   /** Метка дивизиона («Д3») — только у видов спорта с официальной шкалой (волейбол). */
   const [division, setDivision] = useState<string | null>(null);
   const [price, setPrice] = useState(0);
   const [capacity, setCapacity] = useState(10);
 
+  // Адрес → координаты (с паузой после ввода). Адрес, подставленный по точке, не ищем.
+  const addressText = address.trim();
+  useEffect(() => {
+    if (addressText.length < 4 || addressFromPoint) {
+      setLookup({ state: 'idle' });
+      return;
+    }
+    setLookup({ state: 'searching' });
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      geocodeAddress(addressText, ctrl.signal)
+        .then((p) => setLookup(p ? { state: 'found', point: p } : { state: 'missing' }))
+        .catch((e) => {
+          if (!ctrl.signal.aborted) setLookup({ state: 'missing' });
+          console.warn('geocode', e);
+        });
+    }, 800);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [addressText, addressFromPoint]);
+
+  // Точку отметили, а адрес не ввели — подставляем адрес по точке.
+  useEffect(() => {
+    if (!point || (addressText && !addressFromPoint)) return;
+    const ctrl = new AbortController();
+    reverseGeocode(point, ctrl.signal)
+      .then((a) => {
+        if (!a) return;
+        setAddress(a);
+        setAddressFromPoint(true);
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [point]);
+
+  const addressPoint = lookup.state === 'found' ? lookup.point : null;
+  /** Место события: отмеченная точка, иначе — найденная по адресу. */
+  const place = point ?? addressPoint;
+  const mismatchKm = point && addressPoint ? distanceKm(point, addressPoint) : 0;
+  const mismatch = mismatchKm * 1000 > SAME_PLACE_M;
+
   const errors: string[] = [];
   if (title.trim().length < 3) errors.push('название');
-  if (!venueName.trim()) errors.push('место');
-  if (!point) errors.push('точку на карте');
+  if (!point && !addressText) errors.push('адрес или точку на карте');
+  else if (!point && lookup.state === 'missing') errors.push('адрес, который есть на карте, или отметьте точку');
+  else if (mismatch) errors.push('одно место: адрес и точка на карте не совпадают');
   if (new Date(when).getTime() < Date.now()) errors.push('дату в будущем');
+  const searching = !point && lookup.state === 'searching';
+
+  const changeAddress = (v: string) => {
+    setAddress(v);
+    setAddressFromPoint(false);
+  };
+
+  const pointToAddress = () => {
+    if (addressPoint) setPoint(addressPoint);
+  };
+
+  const addressToPoint = async () => {
+    if (!point) return;
+    const a = await reverseGeocode(point).catch(() => null);
+    if (a) {
+      setAddress(a);
+      setAddressFromPoint(true);
+    } else toast('Не удалось определить адрес точки — поправьте адрес вручную', 'error');
+  };
 
   const submit = async (ev: FormEvent) => {
     ev.preventDefault();
@@ -78,7 +153,11 @@ export function CreateEventPage() {
       setLoginOpen(true);
       return;
     }
-    if (errors.length || !point) {
+    if (searching) {
+      toast('Ищем адрес на карте, секунду…', 'info');
+      return;
+    }
+    if (errors.length || !place) {
       toast(`Укажите ${errors.join(', ')}`, 'error');
       return;
     }
@@ -92,10 +171,10 @@ export function CreateEventPage() {
           description: description.trim(),
           startsAt: new Date(when).toISOString(),
           durationMin,
-          venueName: venueName.trim(),
-          address: address.trim(),
-          lat: point.lat,
-          lng: point.lng,
+          venueName: venueName.trim() || addressText || 'Точка на карте',
+          address: addressText,
+          lat: place.lat,
+          lng: place.lng,
           level,
           price,
           capacity,
@@ -158,8 +237,10 @@ export function CreateEventPage() {
             <Icon className="widget-icon" name="pin" size={40} color="#ff3b30" />
             <div className="widget-body">
               <div className="widget-label">Где</div>
-              <div className="widget-value">{venueName || 'Не указано'}</div>
-              <div className="widget-sub">{point ? 'Точка на карте отмечена' : 'Нажмите, чтобы выбрать место на карте'}</div>
+              <div className="widget-value">{venueName || addressText || 'Не указано'}</div>
+              <div className="widget-sub">
+                {point ? 'Точка на карте отмечена' : addressPoint ? 'Место найдено по адресу' : 'Адрес или точка на карте'}
+              </div>
             </div>
             <CaretDown size={20} weight="bold" className="widget-chevron" />
           </div>
@@ -192,7 +273,17 @@ export function CreateEventPage() {
             <input className="input" maxLength={120} placeholder="Например: Футбол 5×5 после работы" value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
           <div className="field">
-            <div className="label">{divisionScale ? `Уровень · ${divisionScale.title}` : 'Уровень'}</div>
+            <div className="label label-row">
+              {divisionScale ? `Уровень · ${divisionScale.title}` : 'Уровень'}
+              <button
+                type="button"
+                className="label-info"
+                aria-label={`Что значат уровни: ${meta.label}`}
+                onClick={() => setLevelsOpen(true)}
+              >
+                <Info size={14} weight="fill" />
+              </button>
+            </div>
             <div className="chips-wrap">
               <button
                 type="button"
@@ -257,25 +348,57 @@ export function CreateEventPage() {
 
         {openSection === 'where' && (
           <div className="expandable-body">
+            <p className="hint">Укажите адрес, отметьте точку на карте или и то и другое.</p>
             <label className="field">
-              <span className="label">Место</span>
-              <input className="input" placeholder="Парк, стадион, спорткомплекс" value={venueName} onChange={(e) => setVenueName(e.target.value)} />
-            </label>
-            <label className="field">
-              <span className="label">Адрес (необязательно)</span>
-              <input className="input" placeholder="ул. Примерная, 1" value={address} onChange={(e) => setAddress(e.target.value)} />
+              <span className="label">Адрес</span>
+              <input className="input" placeholder="ул. Примерная, 1" value={address} onChange={(e) => changeAddress(e.target.value)} />
+              {addressText && !addressFromPoint && (
+                <span className="hint">
+                  {lookup.state === 'searching'
+                    ? 'Ищем адрес на карте…'
+                    : lookup.state === 'found'
+                      ? point
+                        ? mismatch
+                          ? null
+                          : '✓ Адрес совпадает с точкой на карте'
+                        : '✓ Адрес найден — точка поставлена по адресу'
+                      : lookup.state === 'missing'
+                        ? point
+                          ? 'Адрес не нашли на карте — место возьмём по отмеченной точке'
+                          : 'Адрес не нашли на карте — уточните его или отметьте точку'
+                        : null}
+                </span>
+              )}
+              {addressFromPoint && addressText && <span className="hint">Адрес подставлен по точке на карте — можно поправить</span>}
             </label>
             <div className="field">
-              <span className="label">Точка на карте {point ? '✓ отмечена' : '— не выбрана'}</span>
-              <div className="card no-pad map-pick-widget">
-                <MapView pick={{ value: point, onPick: setPoint }} className="map-pick" zoom={11} />
-              </div>
-              {!point && (
-                <button type="button" className="btn btn-ghost btn-block" onClick={() => setOpenSection('where')}>
-                  Указать на карте
-                </button>
-              )}
+              <span className="label">Точка на карте {point ? '✓ отмечена' : addressPoint ? '· по адресу' : '— не выбрана'}</span>
+              <MapPicker
+                value={place}
+                caption={addressText || null}
+                // Адрес, подставленный по прошлой точке, обновится по новой (эффект выше).
+                onPick={setPoint}
+              />
             </div>
+            {mismatch && (
+              <div className="card callout callout-danger place-mismatch">
+                <div>
+                  Адрес и точка на карте не совпадают — между ними {formatDistance(mismatchKm)}. Что верно?
+                </div>
+                <div className="sheet-actions">
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={pointToAddress}>
+                    Верен адрес
+                  </button>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={addressToPoint}>
+                    Верна точка
+                  </button>
+                </div>
+              </div>
+            )}
+            <label className="field">
+              <span className="label">Название места (необязательно)</span>
+              <input className="input" placeholder="Парк, стадион, спорткомплекс" value={venueName} onChange={(e) => setVenueName(e.target.value)} />
+            </label>
           </div>
         )}
 
@@ -345,10 +468,12 @@ export function CreateEventPage() {
           </div>
         )}
 
-        <button className="btn btn-primary btn-arrow btn-block" disabled={busy || errors.length > 0 || !point}>
-          {busy ? 'Публикуем…' : 'Опубликовать'}
+        <button className="btn btn-primary btn-arrow btn-block" disabled={busy || searching || errors.length > 0 || !place}>
+          {busy ? 'Публикуем…' : searching ? 'Ищем адрес…' : 'Опубликовать'}
         </button>
       </form>
+
+      <LevelsInfoSheet open={levelsOpen} onClose={() => setLevelsOpen(false)} initialSport={sport} />
 
       <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} reason="Войдите, чтобы создать событие" />
     </div>

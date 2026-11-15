@@ -1,10 +1,12 @@
-import type { AboutMe, AppUser, CoachProfile, EventStatus, NewEventInput, SportEvent } from '../domain/types';
+import type { AboutMe, AppUser, CoachProfile, EventStatus, NewEventInput, PublicProfile, RegStatus, SportEvent } from '../domain/types';
 import type { TelegramUserInfo } from '../platforms';
 
 export interface Participant {
   userId: string;
   name: string;
   photoUrl?: string | null;
+  /** pending — заявка ждёт решения организатора. */
+  status: RegStatus;
 }
 
 export interface TelegramLoginRequest {
@@ -29,6 +31,8 @@ export interface Backend {
   updateAbout(user: AppUser, about: AboutMe): Promise<AppUser>;
   /** null — выключить профиль тренера. */
   updateCoach(user: AppUser, coach: CoachProfile | null): Promise<AppUser>;
+  /** Профиль другого пользователя (участника, организатора). */
+  getProfile(id: string): Promise<PublicProfile | null>;
 
   // --- events ---
   listEvents(opts?: { includeHidden?: boolean }): Promise<SportEvent[]>;
@@ -37,8 +41,12 @@ export interface Backend {
   setEventStatus(id: string, status: EventStatus): Promise<void>;
 
   // --- registrations ---
-  myRegistrationIds(userId: string): Promise<Set<string>>;
-  register(eventId: string, user: AppUser): Promise<void>;
+  /** Мои заявки: id события → статус. */
+  myRegistrations(userId: string): Promise<Map<string, RegStatus>>;
+  /** Подать заявку; возвращает статус (организатор своего события и импортные события — сразу approved). */
+  register(eventId: string, user: AppUser): Promise<RegStatus>;
   unregister(eventId: string, user: AppUser): Promise<void>;
+  /** Решение организатора по заявке. */
+  decideRegistration(eventId: string, userId: string, approve: boolean): Promise<void>;
   participants(eventId: string): Promise<Participant[]>;
 }

@@ -1,4 +1,4 @@
-import type { AppUser, SportEvent } from '../../domain/types';
+import type { AppUser, RegStatus, SportEvent } from '../../domain/types';
 import { platform } from '../../platforms';
 import type { Backend, Participant } from '../types';
 import { DEMO_PARTICIPANT_NAMES, generateSeedEvents } from './seed';
@@ -16,6 +16,8 @@ interface Registration {
   userId: string;
   name: string;
   photoUrl?: string | null;
+  /** Старые записи без статуса — принятые. */
+  status?: RegStatus;
 }
 
 interface State {
@@ -54,7 +56,7 @@ function save(state: State) {
 }
 
 function withCounts(state: State, e: SportEvent): SportEvent {
-  const local = state.registrations.filter((r) => r.eventId === e.id).length;
+  const local = state.registrations.filter((r) => r.eventId === e.id && (r.status ?? 'approved') === 'approved').length;
   return { ...e, registeredCount: e.registeredCount + local };
 }
 
@@ -135,6 +137,18 @@ export function createDemoBackend(): Backend {
       return next;
     },
 
+    async getProfile(id) {
+      const me = await this.restoreSession();
+      if (me?.id === id) return { id, name: me.name, username: me.username, photoUrl: me.photoUrl, about: me.about, coach: me.coach };
+      const s = load();
+      const reg = s.registrations.find((r) => r.userId === id);
+      if (reg) return { id, name: reg.name, photoUrl: reg.photoUrl };
+      const m = /^demo-(.+)-(d+)$/.exec(id);
+      if (!m) return null;
+      const seedNum = Number(m[1].replace(/D/g, '')) || 0;
+      return { id, name: DEMO_PARTICIPANT_NAMES[(Number(m[2]) + seedNum * 3) % DEMO_PARTICIPANT_NAMES.length] };
+    },
+
     async listEvents(opts) {
       const s = load();
       return s.events
@@ -163,7 +177,13 @@ export function createDemoBackend(): Backend {
       };
       s.events.push(event);
       // Организатор автоматически участвует в своём событии.
-      s.registrations.push({ eventId: event.id, userId: organizer.id, name: organizer.name, photoUrl: organizer.photoUrl });
+      s.registrations.push({
+        eventId: event.id,
+        userId: organizer.id,
+        name: organizer.name,
+        photoUrl: organizer.photoUrl,
+        status: 'approved',
+      });
       save(s);
       return withCounts(s, event);
     },
@@ -175,19 +195,36 @@ export function createDemoBackend(): Backend {
       save(s);
     },
 
-    async myRegistrationIds(userId) {
+    async myRegistrations(userId) {
       const s = load();
-      return new Set(s.registrations.filter((r) => r.userId === userId).map((r) => r.eventId));
+      return new Map(s.registrations.filter((r) => r.userId === userId).map((r) => [r.eventId, r.status ?? 'approved']));
     },
 
     async register(eventId, user) {
       const s = load();
       const e = s.events.find((x) => x.id === eventId);
       if (!e) throw new Error('Событие не найдено');
-      if (s.registrations.some((r) => r.eventId === eventId && r.userId === user.id)) return;
+      const existing = s.registrations.find((r) => r.eventId === eventId && r.userId === user.id);
+      if (existing) return existing.status ?? 'approved';
       const ev = withCounts(s, e);
       if (ev.registeredCount >= ev.capacity) throw new Error('Мест больше нет');
-      s.registrations.push({ eventId, userId: user.id, name: user.name, photoUrl: user.photoUrl });
+      // Демо-события (seed) некому одобрять — запись сразу принята; на чужие локальные — заявка.
+      const status: RegStatus = e.organizerId === user.id || e.organizerId.startsWith('org-') ? 'approved' : 'pending';
+      s.registrations.push({ eventId, userId: user.id, name: user.name, photoUrl: user.photoUrl, status });
+      save(s);
+      return status;
+    },
+
+    async decideRegistration(eventId, userId, approve) {
+      const s = load();
+      const r = s.registrations.find((x) => x.eventId === eventId && x.userId === userId);
+      if (!r) throw new Error('Заявка не найдена');
+      const e = s.events.find((x) => x.id === eventId);
+      if (approve && e) {
+        const ev = withCounts(s, e);
+        if (ev.registeredCount >= ev.capacity) throw new Error('Мест больше нет');
+      }
+      r.status = approve ? 'approved' : 'rejected';
       save(s);
     },
 
@@ -205,10 +242,11 @@ export function createDemoBackend(): Backend {
       const fake: Participant[] = Array.from({ length: e.registeredCount }, (_, i) => ({
         userId: `demo-${eventId}-${i}`,
         name: DEMO_PARTICIPANT_NAMES[(i + seedNum * 3) % DEMO_PARTICIPANT_NAMES.length],
+        status: 'approved',
       }));
       const real: Participant[] = s.registrations
         .filter((r) => r.eventId === eventId)
-        .map((r) => ({ userId: r.userId, name: r.name, photoUrl: r.photoUrl }));
+        .map((r) => ({ userId: r.userId, name: r.name, photoUrl: r.photoUrl, status: r.status ?? 'approved' }));
       return [...real, ...fake];
     },
   };

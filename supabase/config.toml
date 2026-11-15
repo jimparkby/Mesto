@@ -17,3 +17,7 @@ verify_jwt = false
 # Вызывается pg_cron (см. миграцию *_ingest_cron.sql), защищена заголовком x-ingest-secret.
 [functions.ingest]
 verify_jwt = false
+
+# Уведомления о заявках: вызывается из приложения с JWT пользователя.
+[functions.registration-notify]
+verify_jwt = true

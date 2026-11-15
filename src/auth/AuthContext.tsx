@@ -1,14 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, type TelegramLoginRequest } from '../api';
-import type { AboutMe, AppUser, CoachProfile } from '../domain/types';
+import type { AboutMe, AppUser, CoachProfile, RegStatus } from '../domain/types';
 import { platform } from '../platforms';
 
 interface AuthState {
   user: AppUser | null;
   loading: boolean;
   error: string | null;
-  /** id событий, на которые записан текущий пользователь */
+  /** id событий, на которые текущий пользователь записан (заявка принята) */
   myEventIds: Set<string>;
+  /** Все мои заявки: id события → статус (pending / approved / rejected). */
+  myRequests: Map<string, RegStatus>;
   signInAsGuest(name: string): Promise<void>;
   startTelegramLogin(): Promise<TelegramLoginRequest>;
   resendTelegramCode(token: string): Promise<void>;
@@ -17,7 +19,8 @@ interface AuthState {
   updateAbout(about: AboutMe): Promise<void>;
   updateCoach(coach: CoachProfile | null): Promise<void>;
   refreshMyEvents(): Promise<void>;
-  toggleRegistration(eventId: string, join: boolean): Promise<void>;
+  /** Возвращает статус заявки после записи (null — запись отменена). */
+  toggleRegistration(eventId: string, join: boolean): Promise<RegStatus | null>;
 }
 
 const AuthCtx = createContext<AuthState | null>(null);
@@ -32,7 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [myEventIds, setMyEventIds] = useState<Set<string>>(new Set());
+  const [myRequests, setMyRequests] = useState<Map<string, RegStatus>>(new Map());
+  const myEventIds = useMemo(
+    () => new Set([...myRequests].filter(([, st]) => st === 'approved').map(([id]) => id)),
+    [myRequests],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshMyEvents = useCallback(async () => {
-    setMyEventIds(user ? await api.myRegistrationIds(user.id) : new Set());
+    setMyRequests(user ? await api.myRegistrations(user.id) : new Map());
   }, [user]);
 
   useEffect(() => {
@@ -108,14 +115,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const toggleRegistration = useCallback(
     async (eventId: string, join: boolean) => {
       if (!user) throw new Error('Нужно войти');
-      if (join) await api.register(eventId, user);
-      else await api.unregister(eventId, user);
-      setMyEventIds((prev) => {
-        const next = new Set(prev);
-        if (join) next.add(eventId);
+      const status = join ? await api.register(eventId, user) : null;
+      if (!join) await api.unregister(eventId, user);
+      setMyRequests((prev) => {
+        const next = new Map(prev);
+        if (status) next.set(eventId, status);
         else next.delete(eventId);
         return next;
       });
+      return status;
     },
     [user],
   );
@@ -126,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       myEventIds,
+      myRequests,
       signInAsGuest,
       startTelegramLogin,
       resendTelegramCode,
@@ -141,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       myEventIds,
+      myRequests,
       signInAsGuest,
       startTelegramLogin,
       resendTelegramCode,

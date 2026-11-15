@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CaretDown, Share } from '@phosphor-icons/react';
+import { CaretDown, Info, Share } from '@phosphor-icons/react';
 import { api, type Participant } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { Icon, IconTile, TILE } from '../components/Icon';
 import { SportIcon } from '../components/SportIcon';
+import { LevelsInfoSheet } from '../components/LevelsInfoSheet';
 import { LoginSheet } from '../components/LoginSheet';
 import { Sheet } from '../components/Sheet';
 import { MapView } from '../components/MapView';
@@ -45,7 +46,7 @@ function ExpandableSection({ title, open, onToggle, children }: ExpandableSectio
 
 export function EventPage() {
   const { id = '' } = useParams();
-  const { user, myEventIds, toggleRegistration } = useAuth();
+  const { user, myRequests, toggleRegistration } = useAuth();
   const toast = useToast();
   const [event, setEvent] = useState<SportEvent | null | undefined>(undefined);
   const [people, setPeople] = useState<Participant[]>([]);
@@ -54,6 +55,8 @@ export function EventPage() {
   const [descOpen, setDescOpen] = useState(false);
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [levelsOpen, setLevelsOpen] = useState(false);
+  const [deciding, setDeciding] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [e, p] = await Promise.all([api.getEvent(id), api.participants(id)]);
@@ -80,7 +83,10 @@ export function EventPage() {
     );
 
   const meta = sportMeta(event.sport);
-  const joined = myEventIds.has(event.id);
+  const request = myRequests.get(event.id);
+  const joined = request === 'approved';
+  const approved = people.filter((p) => p.status === 'approved');
+  const pending = people.filter((p) => p.status === 'pending');
   const past = isPast(event);
   const spotsFull = isFull(event);
   const left = spotsLeft(event);
@@ -92,8 +98,10 @@ export function EventPage() {
     }
     setBusy(true);
     try {
-      await toggleRegistration(event.id, want);
-      toast(want ? 'Вы записаны! Увидимся на тренировке' : 'Запись отменена', want ? 'success' : 'info');
+      const status = await toggleRegistration(event.id, want);
+      if (status === 'pending') toast('Заявка отправлена. Организатор посмотрит профиль и подтвердит запись', 'success');
+      else if (status === 'approved') toast('Вы записаны! Увидимся на тренировке', 'success');
+      else toast(request === 'pending' ? 'Заявка отозвана' : 'Запись отменена', 'info');
       await load();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -118,6 +126,19 @@ export function EventPage() {
     }
   };
 
+  const decide = async (userId: string, approve: boolean) => {
+    setDeciding(userId);
+    try {
+      await api.decideRegistration(event.id, userId, approve);
+      toast(approve ? 'Участник принят' : 'Заявка отклонена', approve ? 'success' : 'info');
+      await load();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setDeciding(null);
+    }
+  };
+
   const share = () =>
     platform
       .share(shareUrl(event), `${meta.emoji} ${event.title} — ${formatWhen(event)}, ${event.venueName}. Присоединяйся!`)
@@ -133,6 +154,8 @@ export function EventPage() {
   else if (event.status === 'cancelled') cta = { label: 'Событие отменено', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (event.status !== 'published') cta = { label: 'Запись закрыта', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (joined) cta = { label: 'Отменить запись', action: () => join(false), kind: 'btn-ghost' };
+  else if (request === 'pending') cta = { label: 'Отозвать заявку', action: () => join(false), kind: 'btn-ghost' };
+  else if (request === 'rejected') cta = { label: 'Заявка отклонена', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (spotsFull) cta = { label: 'Мест нет', action: () => {}, kind: 'btn-ghost', disabled: true };
   else cta = { label: event.price > 0 ? `Записаться · ${formatPrice(event.price)}` : 'Записаться', action: () => join(true), kind: 'btn-primary btn-arrow' };
 
@@ -149,7 +172,21 @@ export function EventPage() {
             <Icon name="check" size={14} /> Вы идёте
           </span>
         )}
+        {request === 'pending' && (
+          <span className="badge badge-on-hero">
+            <Icon name="clock" size={14} /> Заявка на рассмотрении
+          </span>
+        )}
       </div>
+
+      {request === 'pending' && (
+        <div className="card callout">
+          Заявка отправлена. Организатор посмотрит ваш профиль и подтвердит запись — ответ придёт от бота.
+        </div>
+      )}
+      {request === 'rejected' && (
+        <div className="card callout callout-danger">Организатор отклонил заявку на это событие.</div>
+      )}
 
       {event.status === 'cancelled' && (
         <div className="card callout callout-danger">
@@ -158,7 +195,13 @@ export function EventPage() {
       )}
 
       <div className="card organizer-card">
-        <Avatar name={event.organizerName || 'Организатор'} size={44} />
+        {event.organizerId ? (
+          <Link to={`/user/${event.organizerId}`} aria-label="Профиль организатора">
+            <Avatar name={event.organizerName || 'Организатор'} size={44} />
+          </Link>
+        ) : (
+          <Avatar name={event.organizerName || 'Организатор'} size={44} />
+        )}
         <div className="organizer-body">
           <div className="widget-label">
             Организатор
@@ -211,7 +254,17 @@ export function EventPage() {
         <div className={`widget widget-level`}>
           <IconTile name="level" color={TILE.indigo} size={44} />
           <div className="widget-body">
-            <div className="widget-label">Уровень</div>
+            <div className="widget-label label-row">
+              Уровень
+              <button
+                type="button"
+                className="label-info"
+                aria-label="Что значат уровни"
+                onClick={() => setLevelsOpen(true)}
+              >
+                <Info size={14} weight="fill" />
+              </button>
+            </div>
             <div className="widget-value">{eventLevelLabel(event, levelLabel)}</div>
           </div>
         </div>
@@ -245,21 +298,57 @@ export function EventPage() {
       </ExpandableSection>
 
       <ExpandableSection
-        title={`Участники · ${event.registeredCount}`}
-        open={peopleOpen}
+        title={`Участники · ${event.registeredCount}${canManage && pending.length ? ` · заявок ${pending.length}` : ''}`}
+        open={peopleOpen || (canManage && pending.length > 0)}
         onToggle={() => setPeopleOpen(!peopleOpen)}
       >
-        {people.length === 0 ? (
+        {canManage && pending.length > 0 && (
+          <div className="requests">
+            <div className="section-title">Заявки — посмотрите профиль и подтвердите</div>
+            {pending.map((p) => (
+              <div key={p.userId} className="request-row">
+                <Link to={`/user/${p.userId}`} className="request-person">
+                  <Avatar name={p.name} photoUrl={p.photoUrl} size={40} />
+                  <span className="request-name">{p.name}</span>
+                </Link>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={deciding === p.userId}
+                  onClick={() => decide(p.userId, false)}
+                  aria-label={`Отклонить: ${p.name}`}
+                >
+                  <Icon name="close" size={16} />
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  disabled={deciding === p.userId}
+                  onClick={() => decide(p.userId, true)}
+                >
+                  Принять
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {approved.length === 0 ? (
           <p className="muted">Пока никого — станьте первым!</p>
         ) : (
           <div className="people">
-            {people.slice(0, 24).map((p) => (
-              <div key={p.userId} className="person">
-                <Avatar name={p.name} photoUrl={p.photoUrl} size={40} />
-                <span>{p.name.split(' ')[0]}</span>
-              </div>
-            ))}
-            {people.length > 24 && <div className="person more">+{people.length - 24}</div>}
+            {approved.slice(0, 24).map((p) =>
+              // Демо-участники — выдуманные, профиля у них нет.
+              p.userId.startsWith('demo-') ? (
+                <div key={p.userId} className="person">
+                  <Avatar name={p.name} photoUrl={p.photoUrl} size={40} />
+                  <span>{p.name.split(' ')[0]}</span>
+                </div>
+              ) : (
+                <Link key={p.userId} to={`/user/${p.userId}`} className="person" aria-label={`Профиль: ${p.name}`}>
+                  <Avatar name={p.name} photoUrl={p.photoUrl} size={40} />
+                  <span>{p.name.split(' ')[0]}</span>
+                </Link>
+              ),
+            )}
+            {approved.length > 24 && <div className="person more">+{approved.length - 24}</div>}
           </div>
         )}
       </ExpandableSection>
@@ -301,6 +390,8 @@ export function EventPage() {
           {busy ? '…' : cta.label}
         </button>
       </div>
+
+      <LevelsInfoSheet open={levelsOpen} onClose={() => setLevelsOpen(false)} initialSport={event.sport} />
 
       <LoginSheet
         open={loginOpen}

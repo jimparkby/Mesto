@@ -2861,3 +2861,120 @@ body::before {
     transition: none;
   }
 }
+
+/* ===== Выбор места: превью карты и карта на весь экран ===== */
+.map-pick-widget {
+  position: relative;
+}
+.map-pick-open {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.map-pick-open-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+.map-full {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--bg, #000);
+  animation: fade 0.18s;
+}
+.map-full-map {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  border-radius: 0;
+}
+.map-full-map .map-canvas {
+  height: 100%;
+}
+.map-full-top {
+  position: absolute;
+  top: calc(12px + var(--safe-top));
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.map-full-hint {
+  max-width: 100%;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: var(--elevated);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+.map-full-bottom {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(16px + var(--safe-bottom));
+}
+.place-mismatch {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ===== Участники: профили и заявки ===== */
+a.person {
+  color: inherit;
+  text-decoration: none;
+}
+a.person:active {
+  opacity: 0.7;
+}
+.requests {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.requests .section-title {
+  margin-bottom: 0;
+}
+.request-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.request-person {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+.request-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

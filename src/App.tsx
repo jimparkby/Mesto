@@ -12,16 +12,18 @@ import { HomePage } from './pages/HomePage';
 import { MainPage } from './pages/MainPage';
 import { MapPage } from './pages/MapPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { UserPage } from './pages/UserPage';
 import { platform } from './platforms';
 import { FiltersProvider, ToastProvider } from './state';
 import { ThemeProvider } from './theme';
 
-/** Ссылка вида t.me/<bot>/<app>?startapp=event_<id> сразу открывает карточку события. */
+/** Ссылка вида t.me/<bot>/<app>?startapp=event_<id> сразу открывает карточку события, user_<id> — профиль. */
 function StartParamRedirect() {
   const navigate = useNavigate();
   useEffect(() => {
     const p = platform.startParam();
     if (p?.startsWith('event_')) navigate(`/event/${p.slice('event_'.length)}`);
+    else if (p?.startsWith('user_')) navigate(`/user/${p.slice('user_'.length)}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;
@@ -42,11 +44,11 @@ const TOURED_KEY = 'toured:v1';
 function useOnboarding() {
   const [justFinished, setJustFinished] = useState(false);
   const [state, setState] = useState<'checking' | 'show' | 'done'>(() =>
-    platform.startParam()?.startsWith('event_') ? 'done' : 'checking',
+    /^(event|user)_/.test(platform.startParam() ?? '') ? 'done' : 'checking',
   );
   // Интерактивный тур по главному экрану — после walkthrough или при первом запуске после обновления.
   const [tour, setTour] = useState<'checking' | 'show' | 'done'>(() =>
-    platform.startParam()?.startsWith('event_') ? 'done' : 'checking',
+    /^(event|user)_/.test(platform.startParam() ?? '') ? 'done' : 'checking',
   );
   useEffect(() => {
     if (state !== 'checking') return;
@@ -99,6 +101,7 @@ export function App() {
                     <Route path="create" element={<CreateEventPage />} />
                     <Route path="profile" element={<ProfilePage />} />
                     <Route path="event/:id" element={<EventPage />} />
+                    <Route path="user/:id" element={<UserPage />} />
                     <Route path="admin" element={<AdminPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Route>

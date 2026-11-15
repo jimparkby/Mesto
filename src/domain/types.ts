@@ -79,6 +79,19 @@ export interface CoachProfile {
   years: number;
 }
 
+/** Заявка на участие: ждёт организатора, принята или отклонена. */
+export type RegStatus = 'pending' | 'approved' | 'rejected';
+
+/** Профиль другого человека — то, что видно участникам и организатору. */
+export interface PublicProfile {
+  id: string;
+  name: string;
+  username?: string | null;
+  photoUrl?: string | null;
+  about?: AboutMe | null;
+  coach?: CoachProfile | null;
+}
+
 export interface AppUser {
   id: string;
   name: string;
