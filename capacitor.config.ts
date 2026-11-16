@@ -5,12 +5,12 @@ const config: CapacitorConfig = {
   appName: 'Mesto',
   webDir: 'dist',
   android: {
-    backgroundColor: '#0d0e10',
+    backgroundColor: '#6c151e',
   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1200,
-      backgroundColor: '#0d0e10',
+      backgroundColor: '#6c151e',
       showSpinner: false,
     },
   },

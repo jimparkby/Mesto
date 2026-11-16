@@ -16,7 +16,7 @@ export function formatDistance(km: number): string {
 }
 
 export function spotsLeft(e: SportEvent): number {
-  return Math.max(0, e.capacity - e.registeredCount);
+  return Math.max(0, e.capacity - e.registeredCount - (e.reserved ?? 0));
 }
 
 export function isFull(e: SportEvent): boolean {

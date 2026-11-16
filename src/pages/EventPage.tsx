@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { ArrowsOut, CaretDown, Info, Share } from '@phosphor-icons/react';
+import { ArrowsOut, CaretDown, Info, Share, TelegramLogo } from '@phosphor-icons/react';
 import { api, type Participant } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
@@ -12,8 +12,10 @@ import { LoginSheet } from '../components/LoginSheet';
 import { Sheet } from '../components/Sheet';
 import { MapView } from '../components/MapView';
 import { formatPrice, formatWhen, isFull, isPast, pluralPlaces, spotsLeft } from '../domain/events';
-import { eventLevelLabel } from '../domain/levels';
-import { levelLabel, sportMeta } from '../domain/sports';
+import { Comments } from '../components/Comments';
+import { eventLevels, takenLabel } from '../components/GameCards';
+import { PersonAvatar, PremiumBadge, RatingBadge } from '../components/People';
+import { sportMeta } from '../domain/sports';
 import type { EventStatus, SportEvent } from '../domain/types';
 import { platform } from '../platforms';
 import { useToast } from '../state';
@@ -53,7 +55,6 @@ export function EventPage() {
   const [people, setPeople] = useState<Participant[]>([]);
   const [busy, setBusy] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
-  const [descOpen, setDescOpen] = useState(false);
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [levelsOpen, setLevelsOpen] = useState(false);
@@ -165,6 +166,7 @@ export function EventPage() {
   if (past) cta = { label: 'Событие завершено', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (event.status === 'cancelled') cta = { label: 'Событие отменено', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (event.status !== 'published') cta = { label: 'Запись закрыта', action: () => {}, kind: 'btn-ghost', disabled: true };
+  else if (user && event.organizerId === user.id) cta = { label: 'Вы организатор', action: () => {}, kind: 'btn-ghost', disabled: true };
   else if (joined) cta = { label: 'Отменить запись', action: () => join(false), kind: 'btn-ghost' };
   else if (request === 'pending') cta = { label: 'Отозвать заявку', action: () => join(false), kind: 'btn-ghost' };
   else if (request === 'rejected') cta = { label: 'Заявка отклонена', action: () => {}, kind: 'btn-ghost', disabled: true };
@@ -206,88 +208,83 @@ export function EventPage() {
         </div>
       )}
 
-      <div className="card organizer-card">
-        {event.organizerId ? (
-          <Link to={`/user/${event.organizerId}`} aria-label="Профиль организатора">
-            <Avatar name={event.organizerName || 'Организатор'} size={44} />
-          </Link>
-        ) : (
-          <Avatar name={event.organizerName || 'Организатор'} size={44} />
-        )}
-        <div className="organizer-body">
-          <div className="widget-label">
-            Организатор
-            {event.organizerIsCoach && (
-              <span className="badge badge-coach">
-                <Icon name="coach" size={12} /> Тренер
+      <section className={`card organizer-card2${event.organizerPremium ? ' is-premium' : ''}`}>
+        <h2 className="card-h">{event.organizerIsCoach ? 'Тренер' : 'Организатор'}</h2>
+        <div className="organizer-row">
+          {event.organizerId ? (
+            <Link to={`/user/${event.organizerId}`} className="organizer-person" aria-label="Профиль организатора">
+              <PersonAvatar name={event.organizerName || 'Организатор'} photoUrl={event.organizerPhotoUrl} size={52} premium={event.organizerPremium} />
+              <span className="organizer-id">
+                <b>
+                  {event.organizerName || 'Не указан'}
+                  {event.organizerPremium && <PremiumBadge small />}
+                </b>
+                <RatingBadge value={event.organizerRating ?? null} />
               </span>
-            )}
-          </div>
-          <div className="organizer-name">{event.organizerName || 'Не указан'}</div>
-          {event.organizerUsername ? (
-            <div className="organizer-handle">@{event.organizerUsername}</div>
-          ) : event.sourceUrl ? (
-            <div className="organizer-handle muted">Событие из внешнего анонса</div>
+            </Link>
           ) : (
-            <div className="organizer-handle muted">Telegram не указан</div>
-          )}
-        </div>
-        {event.organizerUsername ? (
-          <button className="btn btn-primary organizer-write" onClick={writeOrganizer}>
-            <Icon name="chat" size={18} />
-            Написать
-          </button>
-        ) : event.sourceUrl ? (
-          <button className="btn btn-ghost organizer-write" onClick={() => platform.openLink(event.sourceUrl!)}>
-            Анонс
-          </button>
-        ) : null}
-      </div>
-
-      <div className="widget-row">
-        <div className={`widget widget-time${joined ? ' is-on' : ''}`}>
-          <IconTile name="clock" color={TILE.gray} size={44} />
-          <div className="widget-body">
-            <div className="widget-label">Когда</div>
-            <div className="widget-value">{formatWhen(event)}</div>
-          </div>
-        </div>
-        <div className={`widget widget-place${joined ? ' is-on' : ''}`}>
-          <IconTile name="pin" color={TILE.red} size={44} />
-          <div className="widget-body">
-            <div className="widget-label">Где</div>
-            <div className="widget-value">{event.venueName}</div>
-            {event.address && <div className="widget-sub">{event.address}</div>}
-          </div>
-        </div>
-      </div>
-
-      <div className="widget-row">
-        <div className={`widget widget-level`}>
-          <IconTile name="level" color={TILE.indigo} size={44} />
-          <div className="widget-body">
-            <div className="widget-label label-row">
-              Уровень
-              <button
-                type="button"
-                className="label-info"
-                aria-label="Что значат уровни"
-                onClick={() => setLevelsOpen(true)}
-              >
-                <Info size={14} weight="fill" />
-              </button>
+            <div className="organizer-person">
+              <PersonAvatar name={event.organizerName || 'Организатор'} size={52} />
+              <span className="organizer-id">
+                <b>{event.organizerName || 'Не указан'}</b>
+                <span className="muted">Событие из внешнего анонса</span>
+              </span>
             </div>
-            <div className="widget-value">{eventLevelLabel(event, levelLabel)}</div>
-          </div>
+          )}
+          {event.organizerUsername ? (
+            <button className="round-action" onClick={writeOrganizer} aria-label="Написать организатору в Telegram">
+              <TelegramLogo size={22} weight="fill" />
+            </button>
+          ) : event.sourceUrl ? (
+            <button className="btn btn-ghost btn-sm" onClick={() => platform.openLink(event.sourceUrl!)}>
+              Анонс
+            </button>
+          ) : null}
         </div>
-        <div className={`widget widget-spots${left <= 3 ? ' is-low' : ''}${spotsFull ? ' is-full' : ''}`}>
-          <IconTile name="users" color={TILE.blue} size={44} />
-          <div className="widget-body">
-            <div className="widget-label">Мест</div>
-            <div className="widget-value">{spotsFull ? 'Мест нет' : `Осталось ${pluralPlaces(left)}`}</div>
-          </div>
-        </div>
-      </div>
+        {event.description ? (
+          <p className="organizer-note prewrap">{event.description}</p>
+        ) : (
+          <p className="organizer-note muted">Организатор не добавил описание.</p>
+        )}
+        {!event.organizerUsername && event.organizerId && (
+          <p className="hint">У организатора нет username в Telegram — задайте вопрос в комментариях.</p>
+        )}
+      </section>
+
+      <section className="card event-facts">
+        <h2 className="card-h">Описание события</h2>
+        <ul className="info-list">
+          <li>
+            <Icon name="level" size={20} />
+            <span className="grow">Уровень: {eventLevels(event)}</span>
+            <button type="button" className="label-info" aria-label="Что значат уровни" onClick={() => setLevelsOpen(true)}>
+              <Info size={14} weight="fill" />
+            </button>
+          </li>
+          <li>
+            <Icon name="clock" size={20} />
+            <span className="grow">{formatWhen(event)}</span>
+          </li>
+          <li className={spotsFull ? 'is-full' : left <= 2 ? 'is-low' : ''}>
+            <Icon name="users" size={20} />
+            <span className="grow">
+              {takenLabel(event)} {event.eventType === 'training' ? 'участников' : 'игроков'}
+              <span className="muted"> · {spotsFull ? 'мест нет' : `осталось ${pluralPlaces(left)}`}</span>
+            </span>
+          </li>
+          <li>
+            <Icon name="pin" size={20} />
+            <span className="grow">
+              {event.venueName}
+              {event.address && event.address !== event.venueName && <span className="muted"> · {event.address}</span>}
+            </span>
+          </li>
+          <li>
+            <Icon name="wallet" size={20} />
+            <span className="grow">{event.price > 0 ? `${formatPrice(event.price)}${event.organizerIsCoach ? ' за занятие' : ' с человека'}` : 'Бесплатно'}</span>
+          </li>
+        </ul>
+      </section>
 
       <div className="card map-card">
         <MapView events={[event]} center={{ lat: event.lat, lng: event.lng }} zoom={14} className="map-event" />
@@ -299,18 +296,6 @@ export function EventPage() {
           Построить маршрут
         </button>
       </div>
-
-      <ExpandableSection
-        title="Описание"
-        open={descOpen}
-        onToggle={() => setDescOpen(!descOpen)}
-      >
-        {event.description ? (
-          <p className="prewrap">{event.description}</p>
-        ) : (
-          <p className="muted">Описание не добавлено.</p>
-        )}
-      </ExpandableSection>
 
       <ExpandableSection
         title={`Участники · ${event.registeredCount}${canManage && pending.length ? ` · заявок ${pending.length}` : ''}`}
@@ -367,6 +352,8 @@ export function EventPage() {
           </div>
         )}
       </ExpandableSection>
+
+      <Comments eventId={event.id} organizerId={event.organizerId} />
 
       {canManage && !past && (
         <section className="card settings">

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, type TelegramLoginRequest } from '../api';
-import type { AboutMe, AppUser, CoachProfile, RegStatus } from '../domain/types';
+import { api, type MediaKind, type PassportUpdate, type TelegramLoginRequest } from '../api';
+import type { AppNotification, AppUser, PendingReview, RegStatus } from '../domain/types';
 import { platform } from '../platforms';
 
 interface AuthState {
@@ -16,11 +16,22 @@ interface AuthState {
   resendTelegramCode(token: string): Promise<void>;
   signInWithTelegramCode(token: string, code: string): Promise<AppUser>;
   signOut(): Promise<void>;
-  updateAbout(about: AboutMe): Promise<void>;
-  updateCoach(coach: CoachProfile | null): Promise<void>;
+  /** Сохранить спортивный паспорт (регистрация и редактирование профиля). */
+  savePassport(update: PassportUpdate): Promise<AppUser>;
+  uploadMedia(file: File, kind: MediaKind): Promise<string>;
+  /** Перечитать профиль с сервера (после оплаты Premium). */
+  reloadMe(): Promise<void>;
   refreshMyEvents(): Promise<void>;
   /** Возвращает статус заявки после записи (null — запись отменена). */
   toggleRegistration(eventId: string, join: boolean): Promise<RegStatus | null>;
+
+  notifications: AppNotification[];
+  unreadCount: number;
+  refreshNotifications(): Promise<void>;
+  markNotificationsRead(): Promise<void>;
+  /** Прошедшие события, ждущие подтверждения и оценки. */
+  pendingReviews: PendingReview[];
+  refreshReviews(): Promise<void>;
 }
 
 const AuthCtx = createContext<AuthState | null>(null);
@@ -36,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [myRequests, setMyRequests] = useState<Map<string, RegStatus>>(new Map());
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([]);
   const myEventIds = useMemo(
     () => new Set([...myRequests].filter(([, st]) => st === 'approved').map(([id]) => id)),
     [myRequests],
@@ -64,13 +77,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const userId = user?.id;
+
+  // «Онлайн»: отмечаемся при входе и раз в 2 минуты, пока приложение открыто.
+  useEffect(() => {
+    if (!userId) return;
+    const touch = () => {
+      if (document.visibilityState === 'visible') api.touchLastSeen().catch(() => {});
+    };
+    touch();
+    const t = setInterval(touch, 120_000);
+    document.addEventListener('visibilitychange', touch);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', touch);
+    };
+  }, [userId]);
+
   const refreshMyEvents = useCallback(async () => {
-    setMyRequests(user ? await api.myRegistrations(user.id) : new Map());
-  }, [user]);
+    setMyRequests(userId ? await api.myRegistrations(userId) : new Map());
+  }, [userId]);
+
+  const refreshNotifications = useCallback(async () => {
+    if (!user) {
+      setNotifications([]);
+      return;
+    }
+    setNotifications(await api.listNotifications(user));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  const refreshReviews = useCallback(async () => {
+    if (!user) {
+      setPendingReviews([]);
+      return;
+    }
+    setPendingReviews(await api.pendingReviews(user));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   useEffect(() => {
     refreshMyEvents().catch(() => {});
-  }, [refreshMyEvents]);
+    refreshNotifications().catch(() => {});
+    refreshReviews().catch(() => {});
+    if (!userId) return;
+    // Уведомления подтягиваем раз в минуту — новые заявки и ответы организаторов.
+    const t = setInterval(() => refreshNotifications().catch(() => {}), 60_000);
+    return () => clearInterval(t);
+  }, [userId, refreshMyEvents, refreshNotifications, refreshReviews]);
+
+  const markNotificationsRead = useCallback(async () => {
+    if (!user) return;
+    setNotifications((list) => list.map((n) => ({ ...n, read: true })));
+    await api.markNotificationsRead(user).catch(() => {});
+  }, [user]);
 
   const signInAsGuest = useCallback(async (name: string) => {
     setError(null);
@@ -96,21 +156,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const updateAbout = useCallback(
-    async (about: AboutMe) => {
+  const savePassport = useCallback(
+    async (update: PassportUpdate) => {
       if (!user) throw new Error('Нужно войти');
-      setUser(await api.updateAbout(user, about));
+      const next = await api.updatePassport(user, update);
+      setUser(next);
+      return next;
     },
     [user],
   );
 
-  const updateCoach = useCallback(
-    async (coach: CoachProfile | null) => {
+  const uploadMedia = useCallback(
+    async (file: File, kind: MediaKind) => {
       if (!user) throw new Error('Нужно войти');
-      setUser(await api.updateCoach(user, coach));
+      return api.uploadMedia(user, file, kind);
     },
     [user],
   );
+
+  const reloadMe = useCallback(async () => {
+    if (!user) return;
+    setUser(await api.reloadMe(user));
+  }, [user]);
 
   const toggleRegistration = useCallback(
     async (eventId: string, join: boolean) => {
@@ -128,6 +195,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
+
   const value = useMemo<AuthState>(
     () => ({
       user,
@@ -140,10 +209,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resendTelegramCode,
       signInWithTelegramCode,
       signOut,
-      updateAbout,
-      updateCoach,
+      savePassport,
+      uploadMedia,
+      reloadMe,
       refreshMyEvents,
       toggleRegistration,
+      notifications,
+      unreadCount,
+      refreshNotifications,
+      markNotificationsRead,
+      pendingReviews,
+      refreshReviews,
     }),
     [
       user,
@@ -156,10 +232,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resendTelegramCode,
       signInWithTelegramCode,
       signOut,
-      updateAbout,
-      updateCoach,
+      savePassport,
+      uploadMedia,
+      reloadMe,
       refreshMyEvents,
       toggleRegistration,
+      notifications,
+      unreadCount,
+      refreshNotifications,
+      markNotificationsRead,
+      pendingReviews,
+      refreshReviews,
     ],
   );
 

@@ -7,7 +7,8 @@ import { MapView } from '../components/MapView';
 import { isPast } from '../domain/events';
 import { applyFilters } from '../domain/filters';
 import { useEvents, useGeolocation } from '../hooks';
-import { useFilters } from '../state';
+import { cityCenter } from '../domain/cities';
+import { useCity, useFilters } from '../state';
 
 export function MapPage() {
   const { events } = useEvents();
@@ -15,6 +16,8 @@ export function MapPage() {
   const { filters } = useFilters();
   const geo = useGeolocation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { city } = useCity();
+  const center = useMemo(() => geo.location ?? cityCenter(city), [geo.location, city]);
 
   const visible = useMemo(
     () => applyFilters(events.filter((e) => !isPast(e)), filters, geo.location),
@@ -29,7 +32,7 @@ export function MapPage() {
         selectedId={selectedId}
         onSelect={setSelectedId}
         userLocation={geo.location}
-        center={geo.location ?? undefined}
+        center={center}
         className="map-full"
       />
       <div className="map-top">

@@ -104,7 +104,7 @@ export function applyFilters(
         const want = divisionLevel(f.division.sport, f.division.tag);
         if (e.level !== 'any' && want && e.level !== want) return false;
       }
-    } else if (f.level !== 'all' && e.level !== 'any' && e.level !== f.level) return false;
+    } else if (f.level !== 'all' && !eventFitsLevel(e, f.level)) return false;
     if (f.freeOnly && e.price > 0) return false;
     if (f.radiusKm && location && distanceKm(location, e) > f.radiusKm) return false;
     if (q) {
@@ -125,4 +125,10 @@ export function sortEvents(events: SportEvent[], mode: SortMode, location: LatLn
     copy.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   }
   return copy;
+}
+
+/** Подходит ли событие человеку этого уровня: у события без уровней — любой уровень подходит. */
+export function eventFitsLevel(e: Pick<SportEvent, 'level' | 'levels'>, level: Level): boolean {
+  if (e.levels.length) return e.levels.includes(level);
+  return e.level === 'any' || e.level === level;
 }

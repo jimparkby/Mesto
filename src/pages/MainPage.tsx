@@ -1,150 +1,152 @@
-import { useMemo } from 'react';
+import { Plus, SlidersHorizontal, Star } from '@phosphor-icons/react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { Avatar } from '../components/Avatar';
-import { EventCard } from '../components/EventCard';
+import { CoachSessionCard, GameCard, MyEventTile } from '../components/GameCards';
 import { Icon } from '../components/Icon';
 import { SportIcon } from '../components/SportIcon';
+import { TopBar, TopBarButton } from '../components/TopBar';
 import { isPast } from '../domain/events';
-import { DEFAULT_FILTERS, type DateRange } from '../domain/filters';
-import { SPORTS } from '../domain/sports';
+import { DEFAULT_FILTERS } from '../domain/filters';
+import { POPULAR_SPORTS, sportMeta } from '../domain/sports';
 import type { SportEvent, SportId } from '../domain/types';
-import { useEvents } from '../hooks';
-import { useFilters } from '../state';
+import { useEvents, useGeolocation } from '../hooks';
+import { useCity, useFilters } from '../state';
 
-const DAY = 24 * 3600_000;
-
-function startOfDay(d = new Date()): number {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x.getTime();
+/** Premium-организаторы выше, дальше — по времени начала. */
+function byPriority(a: SportEvent, b: SportEvent): number {
+  if (!!a.organizerPremium !== !!b.organizerPremium) return a.organizerPremium ? -1 : 1;
+  return a.startsAt.localeCompare(b.startsAt);
 }
 
-function plural(n: number, one: string, few: string, many: string): string {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return one;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-  return many;
-}
-
-/** Главная: приветствие, сводка в крупных виджетах и ближайшие события — всё из реальных данных. */
+/** Главная «События»: мои события, фильтр по виду спорта, занятия с тренером и доступные игры в выбранном городе. */
 export function MainPage() {
-  const { user, myEventIds } = useAuth();
+  const { user, myEventIds, myRequests, pendingReviews } = useAuth();
   const { events, loading } = useEvents();
+  const { city } = useCity();
   const { setFilters } = useFilters();
+  const geo = useGeolocation();
   const navigate = useNavigate();
+  const [sport, setSport] = useState<SportId | 'all'>('all');
 
-  const stats = useMemo(() => {
-    const upcoming = events.filter((e) => !isPast(e));
-    const today0 = startOfDay();
-    const inRange = (e: SportEvent, from: number, to: number) => {
-      const t = new Date(e.startsAt).getTime();
-      return t >= from && t < to;
-    };
-    const bySport = new Map<SportId, number>();
-    for (const e of upcoming) bySport.set(e.sport, (bySport.get(e.sport) ?? 0) + 1);
+  const data = useMemo(() => {
+    const upcoming = events.filter((e) => !isPast(e) && e.city === city);
+    const mine = user
+      ? upcoming
+          .filter((e) => e.organizerId === user.id || myEventIds.has(e.id) || myRequests.get(e.id) === 'pending')
+          .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+      : [];
+    const bySport = sport === 'all' ? upcoming : upcoming.filter((e) => e.sport === sport);
+    const isCoachSession = (e: SportEvent) => e.eventType === 'training' && !!e.organizerIsCoach;
+    // Виды спорта, по которым есть события, — первыми в чипах.
+    const counts = new Map<SportId, number>();
+    for (const e of upcoming) counts.set(e.sport, (counts.get(e.sport) ?? 0) + 1);
+    const chips = [...new Set([...[...counts.keys()].sort((a, b) => counts.get(b)! - counts.get(a)!), ...POPULAR_SPORTS])].slice(0, 14);
     return {
-      upcoming,
-      today: upcoming.filter((e) => inRange(e, today0, today0 + DAY)).length,
-      week: upcoming.filter((e) => inRange(e, today0, today0 + 7 * DAY)).length,
-      free: upcoming.filter((e) => e.price === 0).length,
-      mine: upcoming.filter((e) => myEventIds.has(e.id)).length,
-      // Сначала виды спорта, по которым есть события.
-      sports: [...SPORTS].filter((s) => s.id !== 'other').sort((a, b) => (bySport.get(b.id) ?? 0) - (bySport.get(a.id) ?? 0)),
+      mine,
+      coach: bySport.filter(isCoachSession).sort(byPriority).slice(0, 12),
+      games: bySport.filter((e) => !isCoachSession(e)).sort(byPriority),
+      chips,
     };
-  }, [events, myEventIds]);
+  }, [events, city, user, myEventIds, myRequests, sport]);
 
-  const openEvents = (patch: { sport?: SportId; date?: DateRange; freeOnly?: boolean }) => {
-    setFilters({
-      ...DEFAULT_FILTERS,
-      sports: patch.sport ? [patch.sport] : [],
-      date: patch.date ?? 'all',
-      freeOnly: !!patch.freeOnly,
-    });
+  const openAll = (coachOnly = false) => {
+    setFilters({ ...DEFAULT_FILTERS, sports: sport === 'all' ? [] : [sport], eventType: coachOnly ? 'training' : 'all' });
     navigate('/events');
   };
 
-  const firstName = user?.name?.split(/\s+/)[0];
-  const num = (n: number) => (loading ? '—' : String(n));
-
   return (
-    <div className="page home">
-      <header className="home-head">
-        <div>
-          <p className="home-hello">{firstName ? `Привет, ${firstName}!` : 'Привет!'}</p>
-          <p className="home-date">
-            {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </p>
-        </div>
-        <Link to="/profile" aria-label="Профиль">
-          <Avatar name={user?.name ?? 'Гость'} photoUrl={user?.photoUrl} size={44} />
+    <div className="page home2">
+      <TopBar
+        title="События"
+        actions={
+          <TopBarButton label="Все события и фильтры" onClick={() => openAll()}>
+            <SlidersHorizontal size={22} />
+          </TopBarButton>
+        }
+      />
+
+      {pendingReviews.length > 0 && (
+        <Link to={`/rate/${pendingReviews[0].event.id}`} className="card review-banner">
+          <span className="review-banner-icon">
+            <Star size={22} weight="fill" />
+          </span>
+          <span className="grow">
+            <b>{pendingReviews[0].event.eventType === 'training' ? 'Как прошла тренировка?' : 'Как прошла игра?'}</b>
+            <span className="muted">Подтвердите «{pendingReviews[0].event.title}» и оцените партнёров</span>
+          </span>
+          <Icon name="chevron" size={18} weight="bold" />
         </Link>
-      </header>
+      )}
 
-      <h1 className="home-title">
-        Найди свою
-        <br />
-        <span>команду</span>
-      </h1>
-
-      <div className="home-sports" role="list">
-        {stats.sports.map((s) => (
-          <button key={s.id} type="button" className="home-sport" onClick={() => openEvents({ sport: s.id })}>
-            <SportIcon sport={s.id} size={18} color={s.color} />
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      <section className="home-grid">
-        <button type="button" className="home-tile" onClick={() => openEvents({ date: 'today' })}>
-          <span className="home-tile-cap">Сегодня</span>
-          <span className="home-tile-num">{num(stats.today)}</span>
-          <span className="home-tile-sub">{plural(stats.today, 'событие', 'события', 'событий')}</span>
-        </button>
-        <button type="button" className="home-tile" onClick={() => openEvents({ date: 'week' })}>
-          <span className="home-tile-cap">На неделе</span>
-          <span className="home-tile-num">{num(stats.week)}</span>
-          <span className="home-tile-sub">игр и тренировок</span>
-        </button>
-        <button type="button" className="home-tile" onClick={() => openEvents({ freeOnly: true })}>
-          <span className="home-tile-cap">Бесплатно</span>
-          <span className="home-tile-num">{num(stats.free)}</span>
-          <span className="home-tile-sub">без оплаты</span>
-        </button>
-        <Link to="/profile" className="home-tile">
-          <span className="home-tile-cap">Я иду</span>
-          <span className="home-tile-num">{user ? num(stats.mine) : '0'}</span>
-          <span className="home-tile-sub">{user ? 'мои записи' : 'войдите, чтобы записаться'}</span>
-        </Link>
-      </section>
-
-      <div className="home-section-head">
-        <h2 className="home-section-title">Ближайшие</h2>
-        <Link to="/events" className="home-link">
-          Все <Icon name="chevron" size={16} weight="bold" />
-        </Link>
-      </div>
-
-      {loading && !events.length ? (
-        <div className="stack">
-          {[0, 1].map((i) => (
-            <div key={i} className="card skeleton tall" />
+      <section>
+        <h2 className="section-h">Мои события</h2>
+        <div className="my-row">
+          <Link to="/create" className="my-create" data-tour="tab-create">
+            <Plus size={22} weight="bold" />
+            Создать событие
+          </Link>
+          {data.mine.map((e) => (
+            <MyEventTile key={e.id} event={e} organizer={e.organizerId === user?.id} />
           ))}
         </div>
-      ) : stats.upcoming.length === 0 ? (
-        <div className="card home-empty">
-          <p>Пока нет событий. Создайте первое — команда найдётся.</p>
-          <Link to="/create" className="btn btn-primary btn-block">
-            <Icon name="plus" size={20} weight="bold" /> Создать событие
-          </Link>
-        </div>
-      ) : (
-        stats.upcoming
-          .slice(0, 3)
-          .map((e) => <EventCard key={e.id} event={e} joined={myEventIds.has(e.id)} />)
+      </section>
+
+      <div className="sport-chips" data-tour="chips" role="list">
+        <button type="button" className={`chip${sport === 'all' ? ' is-on' : ''}`} onClick={() => setSport('all')}>
+          Все
+        </button>
+        {data.chips.map((id) => {
+          const m = sportMeta(id);
+          const on = sport === id;
+          return (
+            <button key={id} type="button" className={`chip${on ? ' is-on' : ''}`} onClick={() => setSport(on ? 'all' : id)}>
+              <SportIcon sport={id} size={18} color={on ? undefined : m.color} />
+              {m.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {data.coach.length > 0 && (
+        <section>
+          <div className="section-row">
+            <h2 className="section-h">Занятия с тренером</h2>
+            <button type="button" className="link" onClick={() => openAll(true)}>
+              Все
+            </button>
+          </div>
+          <div className="coach-row">
+            {data.coach.map((e) => (
+              <CoachSessionCard key={e.id} event={e} />
+            ))}
+          </div>
+        </section>
       )}
+
+      <section className="stack" data-tour="list">
+        <div className="section-row">
+          <h2 className="section-h">Доступные игры</h2>
+          <button type="button" className="link" onClick={() => openAll()}>
+            Все
+          </button>
+        </div>
+        {loading && !events.length ? (
+          [0, 1].map((i) => <div key={i} className="card skeleton tall" />)
+        ) : data.games.length === 0 ? (
+          <div className="card home-empty">
+            <p>
+              {sport === 'all' ? `В городе ${city} пока нет игр.` : `${sportMeta(sport).label}: в городе ${city} пока нет игр.`} Создайте
+              первую — команда найдётся.
+            </p>
+            <Link to="/create" className="btn btn-primary btn-block">
+              <Plus size={20} weight="bold" /> Создать событие
+            </Link>
+          </div>
+        ) : (
+          data.games.slice(0, 30).map((e) => <GameCard key={e.id} event={e} location={geo.location} />)
+        )}
+      </section>
     </div>
   );
 }

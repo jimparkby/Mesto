@@ -6,15 +6,21 @@ import { Layout } from './components/Layout';
 import { LoginSheet } from './components/LoginSheet';
 import { Onboarding } from './components/Onboarding';
 import { AdminPage } from './pages/AdminPage';
+import { CommunitiesPage } from './pages/CommunitiesPage';
 import { CreateEventPage } from './pages/CreateEventPage';
 import { EventPage } from './pages/EventPage';
 import { HomePage } from './pages/HomePage';
 import { MainPage } from './pages/MainPage';
 import { MapPage } from './pages/MapPage';
+import { NotificationsPage } from './pages/NotificationsPage';
+import { PassportPage } from './pages/PassportPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { RatePage } from './pages/RatePage';
+import { SearchPage } from './pages/SearchPage';
+import { StatsPage } from './pages/StatsPage';
 import { UserPage } from './pages/UserPage';
 import { platform } from './platforms';
-import { FiltersProvider, ToastProvider } from './state';
+import { CityProvider, FiltersProvider, ToastProvider } from './state';
 import { ThemeProvider } from './theme';
 
 /** Ссылка вида t.me/<bot>/<app>?startapp=event_<id> сразу открывает карточку события, user_<id> — профиль. */
@@ -88,6 +94,7 @@ export function App() {
         // HashRouter: работает без настройки сервера — на GitHub Pages, в Telegram и в Capacitor (file://).
         <HashRouter>
           <ToastProvider>
+            <CityProvider>
             <AuthProvider>
               <FiltersProvider>
                 <StartParamRedirect />
@@ -102,6 +109,12 @@ export function App() {
                     <Route path="profile" element={<ProfilePage />} />
                     <Route path="event/:id" element={<EventPage />} />
                     <Route path="user/:id" element={<UserPage />} />
+                    <Route path="search" element={<SearchPage />} />
+                    <Route path="communities" element={<CommunitiesPage />} />
+                    <Route path="passport" element={<PassportPage />} />
+                    <Route path="rate/:id" element={<RatePage />} />
+                    <Route path="notifications" element={<NotificationsPage />} />
+                    <Route path="stats" element={<StatsPage />} />
                     <Route path="admin" element={<AdminPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Route>
@@ -109,6 +122,7 @@ export function App() {
                 {onboarding.tour === 'show' && <FeatureTour onDone={onboarding.finishTour} />}
               </FiltersProvider>
             </AuthProvider>
+            </CityProvider>
           </ToastProvider>
         </HashRouter>
       )}

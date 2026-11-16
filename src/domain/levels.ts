@@ -12,6 +12,40 @@ export interface Division {
   description: string;
 }
 
+/** Общая шкала уровней — как в спортивном паспорте: Novice, Amateur, Intermediate, Advanced, Pro. */
+const GENERIC_DIVISIONS: Division[] = [
+  {
+    tag: 'Новичок',
+    label: 'Новичок · Novice',
+    level: 'beginner',
+    description: 'Только начинает или вернулся после перерыва: базовые движения, спокойный темп, много объяснений.',
+  },
+  {
+    tag: 'Любитель',
+    label: 'Любитель · Amateur',
+    level: 'amateur',
+    description: 'Играет или занимается время от времени: знает правила и базовую технику, но без регулярной практики.',
+  },
+  {
+    tag: 'Средний',
+    label: 'Средний · Intermediate',
+    level: 'intermediate',
+    description: 'Занимается регулярно, основные навыки уверенные, понимает технику и тактику, держит темп группы.',
+  },
+  {
+    tag: 'Продвинутый',
+    label: 'Продвинутый · Advanced',
+    level: 'advanced',
+    description: 'Долгая практика, высокая техника и выносливость, участвует в любительских турнирах и лигах.',
+  },
+  {
+    tag: 'Профи',
+    label: 'Профи · Pro',
+    level: 'pro',
+    description: 'Спортивный разряд или опыт профессиональных соревнований, тренерский уровень техники.',
+  },
+];
+
 export interface SportScale {
   sport: SportId;
   /** Название шкалы, например «Дивизионы ЛВЛ». */
@@ -323,33 +357,15 @@ export const SPORT_SCALES: SportScale[] = [
     sport: 'other',
     title: 'Общая шкала',
     note: 'Для видов спорта без официальных делений используется общая шкала уровней.',
-    divisions: [
-      {
-        tag: 'Новичок',
-        label: 'Новичок',
-        level: 'beginner',
-        description: 'Только начинает или вернулся после перерыва: базовые движения, спокойный темп, много объяснений от организатора.',
-      },
-      {
-        tag: 'Средний',
-        label: 'Средний',
-        level: 'intermediate',
-        description: 'Занимается регулярно, основные навыки уверенные, понимает технику и отвечает за темп группы.',
-      },
-      {
-        tag: 'Продвинутый',
-        label: 'Продвинутый',
-        level: 'advanced',
-        description: 'Долгая практика, высокая техника и выносливость, тренировки с нагрузкой и соревновательный настрой.',
-      },
-    ],
+    divisions: GENERIC_DIVISIONS,
   },
 ];
 
 const bySport = new Map(SPORT_SCALES.map((s) => [s.sport, s]));
 
-export function scaleFor(sport: SportId): SportScale | undefined {
-  return bySport.get(sport);
+/** Шкала вида спорта; у видов спорта без своих делений — общая шкала Novice → Pro. */
+export function scaleFor(sport: SportId): SportScale {
+  return bySport.get(sport) ?? { ...bySport.get('other')!, sport };
 }
 
 /** Во что маппится деление в общей шкале уровней; null, если деления нет. */

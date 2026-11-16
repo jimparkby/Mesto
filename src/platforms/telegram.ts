@@ -32,6 +32,7 @@ interface TgWebApp {
   };
   openLink(url: string): void;
   openTelegramLink(url: string): void;
+  openInvoice?(url: string, cb: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void): void;
   CloudStorage?: {
     getItem(key: string, cb: (err: unknown, value?: string) => void): void;
     setItem(key: string, value: string, cb?: (err: unknown) => void): void;
@@ -48,12 +49,12 @@ declare global {
 const CLOUD_TIMEOUT_MS = 1500;
 
 /** Дубль ключа из src/theme.tsx (без импорта, чтобы не зацикливать платформу и тему). */
-const THEME_STORAGE_KEY = 'theme:v1';
+const THEME_STORAGE_KEY = 'theme:v2';
 
-/** Явный выбор пользователя: light — только если выбрано; иначе тёмная (не тема Telegram). */
+/** Явный выбор пользователя: dark — только если выбрано; иначе светлая (не тема Telegram). */
 function storedSchemeOverride(): 'light' | 'dark' {
   const v = localStorage.getItem(THEME_STORAGE_KEY);
-  return v === 'light' ? 'light' : 'dark';
+  return v === 'dark' ? 'dark' : 'light';
 }
 
 /** CloudStorage принимает ключи только из A-Z, a-z, 0-9, _ и -. */
@@ -84,7 +85,7 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       const applyChrome = () => {
         const scheme = storedSchemeOverride();
         document.documentElement.dataset.scheme = scheme;
-        const bg = scheme === 'dark' ? '#0d0e10' : '#f3f5f6';
+        const bg = scheme === 'dark' ? '#140b0d' : '#f7f2f0';
         if (tg.isVersionAtLeast('6.1')) {
           tg.setHeaderColor?.(bg);
           tg.setBackgroundColor?.(bg);
@@ -154,7 +155,7 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
       return () => tg.offEvent?.('themeChanged', cb);
     },
     setAppScheme(scheme) {
-      const bg = scheme === 'dark' ? '#0d0e10' : '#f3f5f6';
+      const bg = scheme === 'dark' ? '#140b0d' : '#f7f2f0';
       if (!tg.isVersionAtLeast('6.1')) return;
       tg.setHeaderColor?.(bg);
       tg.setBackgroundColor?.(bg);
@@ -164,6 +165,13 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
     telegramUser: () => tg.initDataUnsafe.user ?? null,
     // start_param приходит при запуске по прямой ссылке t.me/<bot>/<app>?startapp=…,
     // а при открытии из inline-кнопки бота параметр остаётся в URL.
+    openInvoice(url) {
+      if (!tg.openInvoice || !tg.isVersionAtLeast('6.1')) {
+        tg.openTelegramLink(url);
+        return Promise.resolve('pending' as const);
+      }
+      return new Promise((resolve) => tg.openInvoice!(url, (status) => resolve(status)));
+    },
     startParam: () =>
       tg.initDataUnsafe.start_param ?? new URLSearchParams(location.search).get('startapp'),
   };

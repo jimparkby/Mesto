@@ -3,6 +3,8 @@
 // /start event_<id> → сразу открывает карточку события.
 // /start login_<token> → код для входа в APK (см. telegram-code-auth).
 // Кнопки «Принять / Отклонить» под заявкой (callback ra:<id> / rr:<id>) → решение организатора.
+// Оплата Premium в Telegram Stars: pre_checkout_query → подтверждение, successful_payment → продление;
+// /start premium — счёт в чат (для APK и браузера), /paysupport — вопросы по оплате.
 //
 // Сообщения из групп-источников (INGEST_GROUPS, см. ingest/config.ts) → импорт событий в ленту.
 //
@@ -18,6 +20,7 @@ import {
   tgApi as tg,
   type TgUser,
 } from '../_shared/telegram.ts';
+import { applyPremiumPayment, parsePremiumPayload, PREMIUM_DAYS, sendPremiumInvoice } from '../_shared/premium.ts';
 import { decideByTelegram, updateOrganizerMessage } from '../_shared/registrations.ts';
 import { config as ingestConfig } from '../ingest/config.ts';
 import { extractEvents } from '../ingest/extract.ts';
@@ -101,6 +104,46 @@ async function ingestGroupMessage(msg: any, edited: boolean) {
   await ingestPosts(createStore(admin), [post], { geoSearch: dbSearch(admin) });
 }
 
+/** Telegram спрашивает перед списанием Stars — подтверждаем, если счёт наш. */
+// deno-lint-ignore no-explicit-any
+async function handlePreCheckout(q: any) {
+  const ok = !!parsePremiumPayload(String(q.invoice_payload ?? ''));
+  await tg('answerPreCheckoutQuery', {
+    pre_checkout_query_id: q.id,
+    ok,
+    ...(ok ? {} : { error_message: 'Счёт устарел. Откройте Premium в приложении ещё раз.' }),
+  });
+}
+
+/** Stars списаны — продлеваем Premium и благодарим. */
+// deno-lint-ignore no-explicit-any
+async function handlePayment(msg: any) {
+  const p = msg.successful_payment;
+  const until = await applyPremiumPayment(String(p.invoice_payload ?? ''), String(p.telegram_payment_charge_id), Number(p.total_amount));
+  const date = until ? new Date(until).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+  await tg('sendMessage', {
+    chat_id: msg.chat.id,
+    text: date
+      ? `⭐ Спасибо! Premium активен до ${date}.\n\nВаши события теперь выше в выдаче, а профиль заметнее. Создавать комьюнити можно во вкладке «Комьюнити».`
+      : 'Оплата получена, но Premium не включился автоматически. Напишите /paysupport — разберёмся и всё вернём.',
+    reply_markup: { inline_keyboard: [[{ text: 'Открыть Mesto', web_app: { url: appUrl() } }]] },
+  });
+}
+
+/** /start premium из APK или браузера: присылаем счёт, если аккаунт Telegram уже связан с профилем. */
+async function handlePremiumStart(chatId: number, fromId: number) {
+  const { data } = await adminClient().from('profiles').select('id').eq('telegram_id', fromId).maybeSingle<{ id: string }>();
+  if (!data) {
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text: 'Сначала откройте Mesto и войдите через Telegram — затем оформите Premium в профиле.',
+      reply_markup: { inline_keyboard: [[{ text: 'Открыть Mesto', web_app: { url: appUrl() } }]] },
+    });
+    return;
+  }
+  await sendPremiumInvoice(chatId, data.id);
+}
+
 /** Организатор нажал «Принять» или «Отклонить» под заявкой. */
 // deno-lint-ignore no-explicit-any
 async function handleCallback(cq: any) {
@@ -124,6 +167,14 @@ Deno.serve(async (req) => {
     await handleCallback(update.callback_query).catch((err) => console.error('callback', err));
     return new Response('ok');
   }
+  if (update?.pre_checkout_query) {
+    await handlePreCheckout(update.pre_checkout_query).catch((err) => console.error('pre_checkout', err));
+    return new Response('ok');
+  }
+  if (update?.message?.successful_payment) {
+    await handlePayment(update.message).catch((err) => console.error('payment', err));
+    return new Response('ok');
+  }
   const groupMsg = update?.message ?? update?.edited_message;
   if (groupMsg && groupMsg.chat?.type !== 'private') {
     // В группах бот только читает анонсы, команды там не обрабатываем.
@@ -138,24 +189,35 @@ Deno.serve(async (req) => {
 
   if (cmd === '/start' && arg?.startsWith('login_')) {
     await handleLogin(arg.slice('login_'.length), chatId, msg.from);
+  } else if (cmd === '/start' && arg === 'premium') {
+    await handlePremiumStart(chatId, msg.from.id);
   } else if (cmd === '/start') {
-    const eventParam = arg?.startsWith('event_') ? arg : undefined;
+    const startParam = arg && /^(event|user)_/.test(arg) ? arg : undefined;
     await tg('sendMessage', {
       chat_id: chatId,
-      text: eventParam
-        ? 'Открываю событие 👇'
-        : '🏃 <b>Mesto</b> — любительские тренировки и игры рядом с тобой в Минске.\n\n' +
-          'Футбол, бег, йога, волейбол и многое другое: найди событие на карте, запишись в один клик ' +
-          'или создай своё и собери команду.',
+      text: startParam
+        ? 'Открываю 👇'
+        : `Привет, ${msg.from?.first_name ?? 'спортсмен'}! 👋\n\n` +
+          '<b>Mesto</b> — партнёры по спорту, тренеры и события рядом с тобой. ' +
+          'Заполни спортивный паспорт, находи людей своего уровня и создавай игры за минуту.\n\n' +
+          'Это чат с командой: пиши сюда вопросы, идеи и замечания — мы читаем всё и отвечаем лично.',
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [[{ text: eventParam ? 'Открыть событие' : 'Открыть Mesto', web_app: { url: appUrl(eventParam) } }]],
+        inline_keyboard: [[{ text: startParam ? 'Открыть' : 'Открыть Mesto', web_app: { url: appUrl(startParam) } }]],
       },
+    });
+  } else if (cmd === '/paysupport') {
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text:
+        `Premium стоит Stars и действует ${PREMIUM_DAYS} дней, без автопродления.\n\n` +
+        'Если оплата прошла, а Premium не включился, или нужен возврат — опишите ситуацию одним сообщением здесь, ' +
+        'команда ответит в течение суток.',
     });
   } else if (cmd === '/help') {
     await tg('sendMessage', {
       chat_id: chatId,
-      text: 'Нажми кнопку меню «Mesto» внизу чата или отправь /start.',
+      text: 'Нажми кнопку меню «Mesto» внизу чата или отправь /start. Вопросы по оплате — /paysupport.',
     });
   }
 

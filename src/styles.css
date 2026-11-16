@@ -1,39 +1,46 @@
 /* ===== Тема =====
-   Тёмная по умолчанию: графитовый фон с аква-свечением, светлые виджеты, аква-акцент,
-   везде один шрифт — Inter. Светлая схема — явный выбор в профиле (data-scheme='light'). */
+   Бренд Mesto — бордо #6C151E → #9E212E и персик #F5DABF → #C28585. Светлая схема по умолчанию
+   (тёплый молочный фон, белые карточки, бордовые кнопки), тёмная — «бордовая ночь» с персиковыми
+   акцентами; выбирается в профиле (data-scheme). Везде один шрифт — Inter. */
 :root {
   /* Бренд */
-  --accent: #5ee7e3;
-  --accent-2: #6aa8ff;
-  --accent-fill: linear-gradient(135deg, #a5f7f3 0%, #5ee7e3 45%, #38c3d6 100%);
-  --brand-fill: radial-gradient(120% 90% at 85% 0%, rgba(94, 231, 227, 0.55), transparent 55%),
-    radial-gradient(90% 80% at 0% 100%, rgba(106, 168, 255, 0.4), transparent 60%), #15171a;
-  --glow: radial-gradient(60% 45% at 75% 18%, rgba(94, 231, 227, 0.22), transparent 70%),
-    radial-gradient(55% 40% at 10% 70%, rgba(106, 168, 255, 0.16), transparent 70%);
+  --accent: #f2b8a8;
+  --accent-rgb: 242, 184, 168;
+  --accent-2: #c28585;
+  --accent-2-rgb: 194, 133, 133;
+  --accent-fill: linear-gradient(135deg, #b8303f 0%, #9e212e 50%, #6c151e 100%);
+  --on-accent: #ffffff;
+  --brand-fill: radial-gradient(120% 90% at 85% 0%, rgba(245, 218, 191, 0.28), transparent 55%),
+    radial-gradient(90% 80% at 0% 100%, rgba(194, 133, 133, 0.32), transparent 60%),
+    linear-gradient(160deg, #6c151e 0%, #9e212e 100%);
+  --glow: radial-gradient(60% 45% at 75% 18%, rgba(158, 33, 46, 0.32), transparent 70%),
+    radial-gradient(55% 40% at 10% 70%, rgba(194, 133, 133, 0.14), transparent 70%);
   --font-display: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  --primary: #5ee7e3; /* текст и иконки акцентного цвета */
-  --primary-press: #46d3cf;
+  --primary: #f2b8a8; /* текст и иконки акцентного цвета */
+  --primary-press: #e9a191;
   --primary-fill: var(--accent-fill); /* заливка основных кнопок */
-  --primary-soft: rgba(94, 231, 227, 0.13);
-  --on-primary: #061416;
+  --primary-soft: rgba(242, 184, 168, 0.13);
+  --on-primary: #ffffff;
+  --premium: #e8b04a;
+  --premium-soft: rgba(232, 176, 74, 0.16);
 
-  --bg: #0d0e10;
-  --surface: #1a1b1f;
-  --component: #26282d;
-  --elevated: #202226;
-  --text: #f4f6f7;
-  --muted: #a1a8ad;
-  --faint: #737b80;
-  --border: rgba(255, 255, 255, 0.08);
-  --blur-bg: rgba(26, 27, 31, 0.72);
-  --scrim: rgba(0, 0, 0, 0.6);
+  --bg: #140b0d;
+  --surface: #201316;
+  --component: #2e1c20;
+  --elevated: #26171a;
+  --text: #f8efee;
+  --muted: #bca7a9;
+  --faint: #8b7578;
+  --border: rgba(255, 228, 224, 0.09);
+  --blur-bg: rgba(32, 19, 22, 0.76);
+  --scrim: rgba(10, 4, 5, 0.62);
 
   --success: #5fd08a;
   --success-soft: rgba(95, 208, 138, 0.14);
   --warn: #ffb35c;
   --warn-soft: rgba(255, 179, 92, 0.14);
-  --danger: #ff6b6b;
+  --danger: #ff7a7a;
 
   --radius: 24px;
   --radius-sm: 14px;
@@ -56,28 +63,31 @@
 }
 
 :root[data-scheme='light'] {
-  --accent: #0fa3a8;
-  --glow: radial-gradient(60% 45% at 75% 10%, rgba(94, 231, 227, 0.25), transparent 70%),
-    radial-gradient(55% 40% at 10% 70%, rgba(106, 168, 255, 0.14), transparent 70%);
-  --bg: #f3f5f6;
+  --accent: #9e212e;
+  --accent-rgb: 158, 33, 46;
+  --glow: radial-gradient(60% 45% at 80% 6%, rgba(158, 33, 46, 0.1), transparent 70%),
+    radial-gradient(55% 40% at 10% 70%, rgba(245, 218, 191, 0.35), transparent 70%);
+  --bg: #f7f2f0;
   --surface: #ffffff;
-  --component: #eceff1;
+  --component: #f2e9e6;
   --elevated: #ffffff;
-  --text: #0d0e10;
-  --muted: #5b6368;
-  --faint: #8c9499;
-  --border: rgba(13, 14, 16, 0.09);
-  --blur-bg: rgba(255, 255, 255, 0.8);
-  --scrim: rgba(13, 14, 16, 0.42);
-  --primary: #0b8f94;
-  --primary-press: #087b80;
-  --primary-soft: rgba(15, 163, 168, 0.1);
+  --text: #1e0f11;
+  --muted: #76666a;
+  --faint: #a4979a;
+  --border: rgba(108, 21, 30, 0.09);
+  --blur-bg: rgba(255, 255, 255, 0.82);
+  --scrim: rgba(30, 10, 12, 0.4);
+  --primary: #9e212e;
+  --primary-press: #86202a;
+  --primary-soft: rgba(158, 33, 46, 0.08);
+  --premium: #c98a12;
+  --premium-soft: rgba(201, 138, 18, 0.12);
   --success: #1f9d55;
   --success-soft: rgba(31, 157, 85, 0.11);
   --warn: #d9720b;
   --warn-soft: rgba(217, 114, 11, 0.12);
   --danger: #d93a30;
-  --shadow-float: 0 8px 28px rgba(13, 14, 16, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-float: 0 8px 28px rgba(108, 21, 30, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
   color-scheme: light;
 }
 
@@ -1134,7 +1144,7 @@ select.input {
   border-radius: 50%;
   background: var(--accent);
   border: 3px solid #fff;
-  box-shadow: 0 0 0 7px rgba(94, 231, 227, 0.22);
+  box-shadow: 0 0 0 7px rgba(var(--accent-rgb), 0.22);
 }
 
 .app.is-fullbleed .app-main {
@@ -1512,7 +1522,7 @@ select.input {
   background: rgba(255, 255, 255, 0.08);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(94, 231, 227, 0.16);
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
   animation: float 6s ease-in-out infinite;
 }
@@ -1525,7 +1535,7 @@ select.input {
 .onb-tile.is-hero {
   background: var(--accent-fill);
   border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 20px 50px rgba(94, 231, 227, 0.5);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 20px 50px rgba(var(--accent-rgb), 0.5);
 }
 @keyframes float {
   50% {
@@ -1561,8 +1571,8 @@ select.input {
 /* Кнопка из макета: персиковый градиент, бордовый текст */
 .btn-peach {
   background: var(--accent-fill);
-  color: #061416;
-  box-shadow: 0 10px 30px rgba(94, 231, 227, 0.35);
+  color: var(--on-accent);
+  box-shadow: 0 10px 30px rgba(var(--accent-rgb), 0.35);
 }
 .onb .btn {
   width: 100%;
@@ -1623,7 +1633,7 @@ select.input {
   display: grid;
   place-items: center;
   border-radius: 50px;
-  background: linear-gradient(150deg, #e9fffe 0%, #b6f6f3 35%, #5ee7e3 75%, #3aa9d8 100%);
+  background: linear-gradient(150deg, #fff4ea 0%, #f5dabf 35%, #c28585 75%, #9e212e 100%);
   box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.7), inset 0 -10px 24px rgba(10, 60, 70, 0.25),
     0 30px 60px rgba(0, 0, 0, 0.45);
   transform: perspective(600px) rotateX(14deg) rotateZ(-8deg);
@@ -1647,8 +1657,8 @@ select.input {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: linear-gradient(150deg, #2a2c31, #0d0e10);
-  border: 2px solid rgba(94, 231, 227, 0.6);
+  background: linear-gradient(150deg, #4a2228, #1e0f11);
+  border: 2px solid rgba(var(--accent-rgb), 0.6);
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.5);
 }
 .onb-dots {
@@ -1766,7 +1776,7 @@ select.input {
   margin-top: 28px;
   border-radius: var(--radius-sm);
   background: var(--accent-fill);
-  color: #061416;
+  color: var(--on-accent);
 }
 .auth-input {
   width: 100%;
@@ -1802,7 +1812,7 @@ select.input {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: linear-gradient(150deg, #2a2c31, #0d0e10);
+  background: linear-gradient(150deg, #4a2228, #1e0f11);
   color: var(--accent);
 }
 .auth-steps {
@@ -1874,7 +1884,7 @@ select.input {
   place-items: center;
   border-radius: 50%;
   background: var(--accent);
-  color: #061416;
+  color: var(--on-accent);
   font-size: 20px;
   font-weight: 700;
   border: 2px solid transparent;
@@ -2038,7 +2048,7 @@ select.input {
   z-index: 1;
   border-radius: 18px;
   pointer-events: none;
-  box-shadow: 0 0 0 100vmax var(--scrim), inset 0 0 0 2px rgba(94, 231, 227, 0.95);
+  box-shadow: 0 0 0 100vmax var(--scrim), inset 0 0 0 2px rgba(var(--accent-rgb), 0.95);
   transition:
     top 0.3s cubic-bezier(0.2, 0.9, 0.3, 1),
     left 0.3s cubic-bezier(0.2, 0.9, 0.3, 1),
@@ -2049,13 +2059,13 @@ select.input {
 @keyframes tour-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 100vmax var(--scrim), inset 0 0 0 2px rgba(94, 231, 227, 0.95);
+    box-shadow: 0 0 0 100vmax var(--scrim), inset 0 0 0 2px rgba(var(--accent-rgb), 0.95);
   }
   50% {
     box-shadow:
       0 0 0 100vmax var(--scrim),
-      inset 0 0 0 2px rgba(94, 231, 227, 0.95),
-      0 0 24px 4px rgba(94, 231, 227, 0.25);
+      inset 0 0 0 2px rgba(var(--accent-rgb), 0.95),
+      0 0 24px 4px rgba(var(--accent-rgb), 0.25);
   }
 }
 .tour-card {
@@ -2164,7 +2174,7 @@ select.input {
 }
 .widget.is-open {
   border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(94, 231, 227, 0.12);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.12);
 }
 .widget-icon {
   flex: none;
@@ -2213,10 +2223,10 @@ select.input {
   text-overflow: ellipsis;
 }
 .widget-sport .widget-icon {
-  background: rgba(94, 231, 227, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 .widget-when .widget-icon {
-  background: rgba(94, 231, 227, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 .widget-where .widget-icon {
   background: rgba(255, 59, 48, 0.1);
@@ -2326,7 +2336,7 @@ select.input {
 }
 .widget.is-on {
   border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(94, 231, 227, 0.12);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.12);
 }
 .widget.is-low {
   border-color: var(--warn);
@@ -2680,16 +2690,16 @@ body::before {
 
 /* Кнопки-капсулы: аква с тёмным текстом */
 .btn-primary {
-  box-shadow: 0 8px 24px rgba(94, 231, 227, 0.22);
+  box-shadow: 0 8px 24px rgba(var(--accent-rgb), 0.22);
 }
 :root[data-scheme='light'] .btn-primary {
-  color: #061416;
+  color: var(--on-accent);
 }
 
 /* Центральная кнопка «События» в таббаре */
 .tab-fab .tab-icon {
   border-radius: 50%;
-  box-shadow: 0 6px 18px rgba(94, 231, 227, 0.35);
+  box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.35);
 }
 .tab.tab-fab.is-active {
   color: var(--primary);

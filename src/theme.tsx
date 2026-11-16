@@ -4,7 +4,8 @@ import { platform } from './platforms';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type Scheme = 'light' | 'dark';
 
-export const THEME_KEY = 'theme:v1';
+// v2 — с редизайном 2.0 светлая схема стала основной, прежний выбор не переносим.
+export const THEME_KEY = 'theme:v2';
 
 /**
  * Владелец data-scheme на <html>: пользовательский выбор (Светлая/Тёмная) перекрывает систему,
@@ -16,10 +17,10 @@ function applyScheme(scheme: Scheme): Scheme {
   return scheme;
 }
 
-/** Синхронный отклик до первого рендера: по умолчанию тёмная; светлая — только явный выбор. */
+/** Синхронный отклик до первого рендера: по умолчанию светлая; тёмная — явный выбор или «Система». */
 export function applyStoredThemeSync() {
   const v = localStorage.getItem(THEME_KEY);
-  applyScheme(v === 'light' ? 'light' : 'dark');
+  applyScheme(v === 'dark' || (v === 'system' && platform.systemScheme() === 'dark') ? 'dark' : 'light');
 }
 
 interface ThemeState {
@@ -32,18 +33,18 @@ interface ThemeState {
 const ThemeCtx = createContext<ThemeState | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>('dark');
+  const [mode, setModeState] = useState<ThemeMode>('light');
   const [system, setSystem] = useState<Scheme>(() => platform.systemScheme());
-  const [scheme, setScheme] = useState<Scheme>(() => (localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'));
+  const [scheme, setScheme] = useState<Scheme>(() => (localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'));
 
   // Смена системной темы / темы Telegram — учитываем только если пользователь выбрал «Система».
   useEffect(() => platform.onSystemSchemeChange(() => setSystem(platform.systemScheme())), []);
 
-  // Восстановление выбора пользователя: без явного «light» всегда тёмная.
+  // Восстановление выбора пользователя: без явного выбора — светлая.
   useEffect(() => {
     platform
       .storageGet(THEME_KEY)
-      .then((v) => setModeState(v === 'dark' || v === 'light' ? v : 'dark'))
+      .then((v) => setModeState(v === 'dark' || v === 'light' || v === 'system' ? v : 'light'))
       .catch(() => {});
   }, []);
 
@@ -54,7 +55,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setMode = useCallback((m: ThemeMode) => {
     setModeState(m);
     platform.haptic('selection');
-    platform.storageSet(THEME_KEY, m === 'system' ? null : m).catch(() => {});
+    platform.storageSet(THEME_KEY, m).catch(() => {});
   }, []);
 
   const value = useMemo(() => ({ mode, setMode, scheme }), [mode, setMode, scheme]);

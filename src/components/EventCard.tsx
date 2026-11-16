@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { distanceKm, formatDistance, formatPrice, formatWhen, isFull, pluralPlaces, spotsLeft } from '../domain/events';
-import { eventLevelLabel } from '../domain/levels';
-import { eventTypeLabel, levelLabel, sportMeta } from '../domain/sports';
+import { eventLevels } from './GameCards';
+import { eventTypeLabel, sportMeta } from '../domain/sports';
 import type { LatLng, SportEvent } from '../domain/types';
 import { Icon } from './Icon';
 import { SportIcon } from './SportIcon';
@@ -16,7 +16,7 @@ interface Props {
 export function EventCard({ event: e, location, joined, compact }: Props) {
   const meta = sportMeta(e.sport);
   const left = spotsLeft(e);
-  const fillPct = Math.min(100, Math.round((e.registeredCount / e.capacity) * 100));
+  const fillPct = Math.min(100, Math.round(((e.registeredCount + e.reserved) / e.capacity) * 100));
 
   return (
     <Link to={`/event/${e.id}`} className={`card event-card${compact ? ' is-compact' : ''}`}>
@@ -47,7 +47,7 @@ export function EventCard({ event: e, location, joined, compact }: Props) {
         </div>
         {!compact && (
           <div className="event-card-footer">
-            <span className="chip-sm">{eventLevelLabel(e, levelLabel)}</span>
+            <span className="chip-sm">{eventLevels(e)}</span>
             <span className={`chip-sm${e.price === 0 ? ' chip-free' : ''}`}>{formatPrice(e.price)}</span>
             <span className={`spots${isFull(e) ? ' is-full' : left <= 3 ? ' is-low' : ''}`}>
               {isFull(e) ? 'Мест нет' : `Осталось ${pluralPlaces(left)}`}

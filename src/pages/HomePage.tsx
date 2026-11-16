@@ -8,7 +8,7 @@ import { Icon } from '../components/Icon';
 import { isPast } from '../domain/events';
 import { applyFilters, countActiveFilters, DEFAULT_FILTERS, sortEvents } from '../domain/filters';
 import { useEvents, useGeolocation } from '../hooks';
-import { useFilters } from '../state';
+import { useCity, useFilters } from '../state';
 import { CaretDown } from '@phosphor-icons/react';
 
 export function HomePage() {
@@ -16,11 +16,12 @@ export function HomePage() {
   const { events, loading, error, reload } = useEvents();
   const { filters, setFilters, sort, setSort } = useFilters();
   const geo = useGeolocation();
+  const { city } = useCity();
 
   const visible = useMemo(() => {
-    const upcoming = events.filter((e) => !isPast(e));
+    const upcoming = events.filter((e) => !isPast(e) && e.city === city);
     return sortEvents(applyFilters(upcoming, filters, geo.location), sort, geo.location);
-  }, [events, filters, sort, geo.location]);
+  }, [events, filters, sort, geo.location, city]);
 
   const hasFilters = countActiveFilters(filters) > 0 || filters.query !== '';
 
@@ -30,7 +31,8 @@ export function HomePage() {
     <div className="page events-page">
       <header className="events-head">
         <div className="events-head-text">
-          <h1 className="events-title">События</h1>
+          <h1 className="events-title">Все события</h1>
+          <span className="muted">{city}</span>
           {api.mode === 'demo' && (
             <span className="badge badge-muted" title="Данные хранятся на устройстве">
               демо-режим

@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { CITIES, DEFAULT_CITY } from './domain/cities';
 import { DEFAULT_FILTERS, type EventFilters, type SortMode } from './domain/filters';
 import { platform, type HapticKind } from './platforms';
 
@@ -23,6 +24,51 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 export function useFilters(): FiltersState {
   const ctx = useContext(FiltersCtx);
   if (!ctx) throw new Error('useFilters outside FiltersProvider');
+  return ctx;
+}
+
+// ---------- Город: выбирается в шапке, общий для ленты, поиска и комьюнити ----------
+
+const CITY_KEY = 'city:v1';
+
+interface CityState {
+  city: string;
+  setCity: (c: string) => void;
+  /** Город уже выбран вручную — не подменять его городом из паспорта. */
+  chosen: boolean;
+}
+
+const CityCtx = createContext<CityState | null>(null);
+
+export function CityProvider({ children }: { children: ReactNode }) {
+  const [city, setCityState] = useState(DEFAULT_CITY);
+  const [chosen, setChosen] = useState(false);
+
+  useEffect(() => {
+    platform
+      .storageGet(CITY_KEY)
+      .then((v) => {
+        if (v && CITIES.some((c) => c.name === v)) {
+          setCityState(v);
+          setChosen(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const setCity = useCallback((c: string) => {
+    setCityState(c);
+    setChosen(true);
+    platform.storageSet(CITY_KEY, c).catch(() => {});
+  }, []);
+
+  const value = useMemo(() => ({ city, setCity, chosen }), [city, setCity, chosen]);
+  return <CityCtx.Provider value={value}>{children}</CityCtx.Provider>;
+}
+
+export function useCity(): CityState {
+  const ctx = useContext(CityCtx);
+  if (!ctx) throw new Error('useCity outside CityProvider');
   return ctx;
 }
 

@@ -1,32 +1,26 @@
-import { useEffect, useState } from 'react';
+import { Share, TelegramLogo } from '@phosphor-icons/react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { Avatar } from '../components/Avatar';
+import { useAuth } from '../auth/AuthContext';
 import { Icon } from '../components/Icon';
-import { SportIcon } from '../components/SportIcon';
-import { levelLabel, sportMeta } from '../domain/sports';
-import type { PublicProfile, SportId } from '../domain/types';
+import { ProfileView } from '../components/ProfileView';
+import { telegramLink } from '../domain/people';
+import type { PublicProfile } from '../domain/types';
+import { useEvents } from '../hooks';
 import { platform } from '../platforms';
+import { useToast } from '../state';
 
-function SportChips({ sports }: { sports: SportId[] }) {
-  return (
-    <div className="chips-wrap">
-      {sports.map((id) => {
-        const s = sportMeta(id);
-        return (
-          <span key={id} className="chip-sm">
-            <SportIcon sport={id} size={14} color={s.color} /> {s.label}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
+const TG_APP_LINK = import.meta.env.VITE_TG_APP_LINK as string | undefined;
 
-/** Профиль другого человека: участника события или организатора. */
+/** Профиль другого человека: спортивный паспорт, оценки, занятия тренера; связь — в Telegram. */
 export function UserPage() {
   const { id = '' } = useParams();
+  const { user } = useAuth();
+  const toast = useToast();
+  const { events } = useEvents();
   const [profile, setProfile] = useState<PublicProfile | null | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setProfile(undefined);
@@ -35,6 +29,13 @@ export function UserPage() {
       .then(setProfile)
       .catch(() => setProfile(null));
   }, [id]);
+
+  // Просмотр профиля — для воронки в статистике тренера.
+  useEffect(() => {
+    if (user && id && user.id !== id) api.trackProfileView(id).catch(() => {});
+  }, [user, id]);
+
+  const own = useMemo(() => events.filter((e) => e.organizerId === id), [events, id]);
 
   if (profile === undefined)
     return (
@@ -49,61 +50,69 @@ export function UserPage() {
           <Icon name="user" size={40} />
         </div>
         <p>Профиль не найден.</p>
-        <Link to="/events" className="btn btn-ghost">
-          К списку событий
+        <Link to="/search" className="btn btn-ghost">
+          К поиску
         </Link>
       </div>
     );
 
-  const about = profile.about;
-  const aboutEmpty = !about || (!about.bio && about.sports.length === 0 && about.level === 'any');
+  const tg = telegramLink(profile.username);
+  const share = () => {
+    const url = TG_APP_LINK ? `${TG_APP_LINK}?startapp=user_${profile.id}` : location.href;
+    platform
+      .share(url, `${profile.name} в Mesto — ${profile.isCoach ? 'тренер' : 'игрок'}`)
+      .then(() => platform.kind === 'web' && toast('Ссылка скопирована'))
+      .catch(() => {});
+  };
+
+  const grantPremium = async (days: number) => {
+    setBusy(true);
+    try {
+      await api.adminSetPremium(profile.id, days);
+      setProfile(await api.getProfile(profile.id));
+      toast(days > 0 ? `Premium выдан на ${days} дней` : 'Premium снят', 'success');
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
-    <div className="page">
-      <header className="profile-head">
-        <Avatar name={profile.name} photoUrl={profile.photoUrl} size={88} />
-        <h1 className="big-title">{profile.name}</h1>
-        {profile.coach && (
-          <span className="badge badge-coach">
-            <Icon name="coach" size={12} /> Тренер
-          </span>
-        )}
-        {profile.username && <div className="muted">@{profile.username}</div>}
-        {profile.username && (
-          <button className="btn btn-primary btn-sm" onClick={() => platform.openLink(`https://t.me/${profile.username}`)}>
-            <Icon name="chat" size={16} /> Написать
-          </button>
-        )}
-      </header>
-
-      <section className="card about">
-        <h2 className="h2">О себе</h2>
-        {aboutEmpty ? (
-          <p className="muted">Раздел «О себе» пока не заполнен.</p>
-        ) : (
-          <>
-            {about!.bio && <p className="prewrap">{about!.bio}</p>}
-            {about!.sports.length > 0 && <SportChips sports={about!.sports} />}
-            {about!.level !== 'any' && (
-              <p className="about-level">
-                <Icon name="level" size={16} /> Уровень: {levelLabel(about!.level)}
-              </p>
+    <div className="page user-page">
+      <h1 className="page-title">Профиль</h1>
+      <ProfileView profile={profile} events={own}>
+        {user?.role === 'admin' && api.mode === 'supabase' && (
+          <section className="card settings">
+            <div className="label">Админ</div>
+            <button className="settings-row" disabled={busy} onClick={() => grantPremium(30)}>
+              <span className="grow">{profile.premium ? 'Продлить Premium на 30 дней' : 'Выдать Premium на 30 дней'}</span>
+            </button>
+            {profile.premium && (
+              <button className="settings-row danger" disabled={busy} onClick={() => grantPremium(0)}>
+                <span className="grow">Снять Premium</span>
+              </button>
             )}
-          </>
+          </section>
         )}
-      </section>
+      </ProfileView>
 
-      {profile.coach && (
-        <section className="card about">
-          <h2 className="h2">Тренер</h2>
-          {profile.coach.bio && <p className="prewrap">{profile.coach.bio}</p>}
-          {profile.coach.sports.length > 0 && <SportChips sports={profile.coach.sports} />}
-          {profile.coach.years > 0 && (
-            <p className="about-level">
-              <Icon name="coach" size={16} /> Стаж: {profile.coach.years} г.
-            </p>
+      {user?.id !== profile.id && (
+        <div className="action-bar">
+          <button className="btn btn-ghost btn-round" onClick={share} aria-label="Поделиться профилем">
+            <Share size={22} weight="bold" />
+          </button>
+          {tg ? (
+            <button className="btn btn-primary btn-grow" onClick={() => platform.openLink(tg)}>
+              <TelegramLogo size={22} weight="fill" />
+              Написать в Telegram
+            </button>
+          ) : (
+            <button className="btn btn-ghost btn-grow" disabled>
+              Нет Telegram для связи
+            </button>
           )}
-        </section>
+        </div>
       )}
     </div>
   );

@@ -67,7 +67,7 @@ export function Onboarding({ onDone }: Props) {
           <div className="onb-tiles">
             {LAUNCH_TILES.map((t, i) => (
               <div key={t} className={`onb-tile${i === 4 ? ' is-hero' : ''}`}>
-                <SportIcon sport={t} size={48} color={i === 4 ? '#061416' : '#5ee7e3'} />
+                <SportIcon sport={t} size={48} color={i === 4 ? '#6c151e' : '#f5dabf'} />
               </div>
             ))}
           </div>

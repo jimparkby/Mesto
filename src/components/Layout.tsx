@@ -1,22 +1,27 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { CaretLeft } from '@phosphor-icons/react';
+import { CaretLeft, House, MagnifyingGlass, MapTrifold, SoccerBall, UserCircle, UsersThree, type Icon as PhosphorIcon } from '@phosphor-icons/react';
+import { useAuth } from '../auth/AuthContext';
 import { platform } from '../platforms';
-import { Icon, type IconName } from './Icon';
+import { useCity } from '../state';
 
-const TABS: { to: string; label: string; icon: IconName }[] = [
-  { to: '/', label: 'Главная', icon: 'home' },
-  { to: '/create', label: 'Создать', icon: 'plus' },
-  { to: '/events', label: 'События', icon: 'events' },
-  { to: '/map', label: 'Карта', icon: 'map' },
-  { to: '/profile', label: 'Профиль', icon: 'user' },
+const TABS: { to: string; label: string; Glyph: PhosphorIcon }[] = [
+  { to: '/', label: 'События', Glyph: SoccerBall },
+  { to: '/search', label: 'Поиск', Glyph: MagnifyingGlass },
+  { to: '/map', label: 'Карта', Glyph: MapTrifold },
+  { to: '/communities', label: 'Комьюнити', Glyph: UsersThree },
+  { to: '/profile', label: 'Профиль', Glyph: UserCircle },
 ];
 
 const ROOTS = new Set(TABS.map((t) => t.to));
+/** Экраны со своей навигацией — без общей капсулы «Назад / На главную». */
+const OWN_NAV = new Set(['/passport']);
 
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { chosen: cityChosen, setCity } = useCity();
   const isRoot = ROOTS.has(location.pathname);
 
   // Кнопка «Назад»: Telegram BackButton / аппаратная кнопка Android.
@@ -36,6 +41,18 @@ export function Layout() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  // Регистрация — это спортивный паспорт: после входа сначала заполняем его.
+  const needsPassport = !!user && !user.onboarded;
+  useEffect(() => {
+    if (needsPassport && location.pathname !== '/passport') navigate('/passport?first=1', { replace: true });
+  }, [needsPassport, location.pathname, navigate]);
+
+  // Город из паспорта — по умолчанию для ленты, если пользователь не выбрал другой.
+  useEffect(() => {
+    if (user?.onboarded && !cityChosen && user.city) setCity(user.city);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.onboarded]);
+
   const goBack = () => {
     platform.haptic('selection');
     if (location.key === 'default') navigate('/', { replace: true });
@@ -47,18 +64,16 @@ export function Layout() {
   };
 
   return (
-    <div
-      className={`app${location.pathname === '/map' ? ' is-fullbleed' : ''}`}
-    >
+    <div className={`app${location.pathname === '/map' ? ' is-fullbleed' : ''}`}>
       {/* На внутренних страницах (событие, профиль участника) — свои «Назад» и «На главную»:
           в браузере и не во всех клиентах Telegram системной кнопки нет. */}
-      {!isRoot && (
+      {!isRoot && !OWN_NAV.has(location.pathname) && (
         <div className="subnav">
           <button type="button" className="subnav-btn" onClick={goBack} aria-label="Назад">
             <CaretLeft size={20} weight="bold" />
           </button>
           <button type="button" className="subnav-btn" onClick={goHome} aria-label="На главную">
-            <Icon name="home" size={20} />
+            <House size={20} weight="fill" />
           </button>
         </div>
       )}
@@ -67,27 +82,21 @@ export function Layout() {
       </main>
       {isRoot && (
         <nav className="tabbar">
-          {TABS.map((t) => (
+          {TABS.map(({ to, label, Glyph }) => (
             <NavLink
-              key={t.to}
-              to={t.to}
+              key={to}
+              to={to}
               end
-              data-tour={t.to === '/map' ? 'tab-map' : t.to === '/create' ? 'tab-create' : undefined}
-              className={({ isActive }) =>
-                `tab${t.to === '/events' ? ' tab-fab' : ''}${isActive ? ' is-active' : ''}`
-              }
+              data-tour={to === '/map' ? 'tab-map' : to === '/search' ? 'tab-search' : undefined}
+              className={({ isActive }) => `tab${isActive ? ' is-active' : ''}`}
               onClick={() => platform.haptic('selection')}
             >
               {({ isActive }) => (
                 <>
                   <span className="tab-icon">
-                    {t.to === '/events' ? (
-                      <Icon name={t.icon} size={22} weight="bold" />
-                    ) : (
-                      <Icon name={t.icon} size={24} weight={isActive ? 'fill' : 'regular'} />
-                    )}
+                    <Glyph size={24} weight={isActive ? 'fill' : 'regular'} />
                   </span>
-                  <span className="tab-label">{t.label}</span>
+                  <span className="tab-label">{label}</span>
                 </>
               )}
             </NavLink>

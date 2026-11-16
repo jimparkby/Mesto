@@ -17,11 +17,23 @@ const SPORT_LABELS: Record<string, string> = {
   swimming: 'Плавание',
   hockey: 'Хоккей',
   other: 'Другое',
+  padel: 'Падел',
+  squash: 'Сквош',
+  badminton: 'Бадминтон',
+  table_tennis: 'Настольный теннис',
+  futsal: 'Мини-футбол',
+  beach_volleyball: 'Пляжный волейбол',
+  gym: 'Тренажёрный зал',
+  boxing: 'Бокс',
+  functional: 'Функциональный тренинг',
+  climbing: 'Скалолазание',
 };
 const LEVEL_LABELS: Record<string, string> = {
   beginner: 'Новичок',
+  amateur: 'Любитель',
   intermediate: 'Средний',
   advanced: 'Продвинутый',
+  pro: 'Профи',
 };
 
 export type RegStatus = 'pending' | 'approved' | 'rejected';
@@ -35,6 +47,7 @@ interface RegInfo {
     starts_at: string;
     capacity: number;
     registered_count: number;
+    reserved?: number;
     organizer_id: string | null;
   };
   user: Profile;
@@ -49,6 +62,11 @@ interface Profile {
   bio?: string;
   fav_sports?: string[];
   skill_level?: string;
+  skills?: { sport: string; level: string; years?: number; price?: number }[];
+  is_coach?: boolean;
+  rating_count?: number;
+  rating_vibe?: number | null;
+  rating_level_fit?: number | null;
 }
 
 export function esc(s: string): string {
@@ -89,7 +107,7 @@ export async function loadRegistration(
   if (!reg) return null;
   const { data: event } = await admin
     .from('events')
-    .select('id, title, starts_at, capacity, registered_count, organizer_id')
+    .select('*')
     .eq('id', reg.event_id)
     .maybeSingle<RegInfo['event']>();
   const user = await loadProfile(reg.user_id);
@@ -98,16 +116,25 @@ export async function loadRegistration(
 }
 
 function profileText(p: Profile): string {
-  const lines = [`<b>${esc(p.name)}</b>${p.username ? ` @${esc(p.username)}` : ''}`];
-  if (p.skill_level && LEVEL_LABELS[p.skill_level]) lines.push(`Уровень: ${LEVEL_LABELS[p.skill_level]}`);
-  if (p.fav_sports?.length) lines.push(`Виды спорта: ${p.fav_sports.map((s) => SPORT_LABELS[s] ?? s).join(', ')}`);
+  const lines = [`<b>${esc(p.name)}</b>${p.username ? ` @${esc(p.username)}` : ''}${p.is_coach ? ' · тренер' : ''}`];
+  const sport = (id: string) => SPORT_LABELS[id] ?? id.replace(/_/g, ' ');
+  if (p.skills?.length) {
+    lines.push(...p.skills.slice(0, 5).map((s) => `• ${sport(s.sport)} — ${LEVEL_LABELS[s.level] ?? 'уровень не указан'}`));
+  } else {
+    if (p.skill_level && LEVEL_LABELS[p.skill_level]) lines.push(`Уровень: ${LEVEL_LABELS[p.skill_level]}`);
+    if (p.fav_sports?.length) lines.push(`Виды спорта: ${p.fav_sports.map(sport).join(', ')}`);
+  }
+  if (p.rating_count) {
+    const r = [p.rating_vibe, p.rating_level_fit].filter((x): x is number => x !== null && x !== undefined).map(Number);
+    if (r.length) lines.push(`Рейтинг: ★ ${(r.reduce((a, b) => a + b, 0) / r.length).toFixed(1)} (${p.rating_count})`);
+  }
   if (p.bio) lines.push(`О себе: ${esc(p.bio)}`);
   if (lines.length === 1) lines.push('<i>Профиль не заполнен</i>');
   return lines.join('\n');
 }
 
 function organizerText(r: RegInfo): string {
-  const left = Math.max(0, r.event.capacity - r.event.registered_count);
+  const left = Math.max(0, r.event.capacity - r.event.registered_count - (r.event.reserved ?? 0));
   const head =
     r.status === 'pending'
       ? '🙋 <b>Новая заявка</b>'

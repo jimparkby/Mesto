@@ -1,4 +1,20 @@
-import type { AboutMe, AppUser, CoachProfile, EventStatus, NewEventInput, PublicProfile, RegStatus, SportEvent } from '../domain/types';
+import type {
+  AppNotification,
+  AppUser,
+  CoachStats,
+  Community,
+  EventComment,
+  EventStatus,
+  NewCommunityInput,
+  NewEventInput,
+  Passport,
+  PeopleFilters,
+  PendingReview,
+  PublicProfile,
+  RatingInput,
+  RegStatus,
+  SportEvent,
+} from '../domain/types';
 import type { TelegramUserInfo } from '../platforms';
 
 export interface Participant {
@@ -15,6 +31,22 @@ export interface TelegramLoginRequest {
   bot: string;
 }
 
+/** Паспорт вместе с именем и аватаром — то, что пользователь редактирует сам. */
+export interface PassportUpdate extends Passport {
+  name: string;
+  photoUrl: string | null;
+}
+
+export type MediaKind = 'photo' | 'video' | 'avatar';
+
+/** Счёт на оплату Premium: ссылка для Telegram.WebApp.openInvoice или ссылка на бота вне Telegram. */
+export interface PremiumInvoice {
+  invoiceUrl: string | null;
+  botUrl: string | null;
+  stars: number;
+  days: number;
+}
+
 /** Единый контракт данных. Реализации: Supabase (прод) и localStorage (демо без бэкенда). */
 export interface Backend {
   mode: 'supabase' | 'demo';
@@ -28,17 +60,31 @@ export interface Backend {
   resendTelegramCode(token: string): Promise<void>;
   signInWithTelegramCode(token: string, code: string): Promise<AppUser>;
   signOut(): Promise<void>;
-  updateAbout(user: AppUser, about: AboutMe): Promise<AppUser>;
-  /** null — выключить профиль тренера. */
-  updateCoach(user: AppUser, coach: CoachProfile | null): Promise<AppUser>;
-  /** Профиль другого пользователя (участника, организатора). */
+  /** Перечитать свой профиль (после оплаты Premium и т.п.). */
+  reloadMe(user: AppUser): Promise<AppUser>;
+
+  // --- спортивный паспорт и люди ---
+  /** Сохранить паспорт; отмечает регистрацию пройденной. */
+  updatePassport(user: AppUser, update: PassportUpdate): Promise<AppUser>;
+  /** Загрузить фото/видео в профиль; возвращает публичную ссылку. */
+  uploadMedia(user: AppUser, file: File, kind: MediaKind): Promise<string>;
+  /** Удалить файл из хранилища (ссылку из паспорта убирает updatePassport). */
+  deleteMedia(user: AppUser, url: string): Promise<void>;
+  touchLastSeen(): Promise<void>;
   getProfile(id: string): Promise<PublicProfile | null>;
+  trackProfileView(id: string): Promise<void>;
+  searchPeople(filters: PeopleFilters): Promise<PublicProfile[]>;
 
   // --- events ---
   listEvents(opts?: { includeHidden?: boolean }): Promise<SportEvent[]>;
   getEvent(id: string): Promise<SportEvent | null>;
   createEvent(input: NewEventInput, organizer: AppUser): Promise<SportEvent>;
   setEventStatus(id: string, status: EventStatus): Promise<void>;
+
+  // --- comments ---
+  listComments(eventId: string): Promise<EventComment[]>;
+  addComment(eventId: string, text: string, user: AppUser): Promise<EventComment>;
+  deleteComment(id: string): Promise<void>;
 
   // --- registrations ---
   /** Мои заявки: id события → статус. */
@@ -49,4 +95,28 @@ export interface Backend {
   /** Решение организатора по заявке. */
   decideRegistration(eventId: string, userId: string, approve: boolean): Promise<void>;
   participants(eventId: string): Promise<Participant[]>;
+
+  // --- подтверждение игры и оценки ---
+  /** Прошедшие события, которые я ещё не подтвердил и не оценил. */
+  pendingReviews(user: AppUser): Promise<PendingReview[]>;
+  /** Данные для экрана оценки конкретного события (null — оценивать нечего). */
+  reviewFor(eventId: string, user: AppUser): Promise<PendingReview | null>;
+  submitReview(eventId: string, happened: boolean, ratings: RatingInput[], user: AppUser): Promise<void>;
+
+  // --- комьюнити ---
+  listCommunities(): Promise<Community[]>;
+  myCommunityIds(userId: string): Promise<Set<string>>;
+  joinCommunity(id: string, user: AppUser): Promise<void>;
+  leaveCommunity(id: string, user: AppUser): Promise<void>;
+  createCommunity(input: NewCommunityInput, user: AppUser): Promise<Community>;
+  deleteCommunity(id: string): Promise<void>;
+
+  // --- уведомления ---
+  listNotifications(user: AppUser): Promise<AppNotification[]>;
+  markNotificationsRead(user: AppUser): Promise<void>;
+
+  // --- тренер и Premium ---
+  coachStats(user: AppUser, days: number, sport: string | null): Promise<CoachStats>;
+  premiumInvoice(user: AppUser): Promise<PremiumInvoice>;
+  adminSetPremium(userId: string, days: number): Promise<void>;
 }

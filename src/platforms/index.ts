@@ -4,7 +4,7 @@ import { createTelegramPlatform, getTelegramWebApp } from './telegram';
 import type { Platform } from './types';
 import { createWebPlatform } from './web';
 
-export type { Platform, PlatformKind, HapticKind, TelegramUserInfo } from './types';
+export type { Platform, PlatformKind, HapticKind, InvoiceStatus, TelegramUserInfo } from './types';
 
 function detect(): Platform {
   const tg = getTelegramWebApp();

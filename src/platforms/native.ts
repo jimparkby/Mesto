@@ -6,11 +6,11 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import type { Platform } from './types';
 
 /** Дубль ключа из src/theme.tsx (без импорта, чтобы не зацикливать платформу и тему). */
-const THEME_STORAGE_KEY = 'theme:v1';
+const THEME_STORAGE_KEY = 'theme:v2';
 
 function applyStatusBar(scheme: 'light' | 'dark') {
   StatusBar.setStyle({ style: scheme === 'dark' ? Style.Dark : Style.Light }).catch(() => {});
-  StatusBar.setBackgroundColor({ color: scheme === 'dark' ? '#0d0e10' : '#f3f5f6' }).catch(() => {});
+  StatusBar.setBackgroundColor({ color: scheme === 'dark' ? '#140b0d' : '#f7f2f0' }).catch(() => {});
 }
 
 /** Android-оболочка на Capacitor. */
@@ -65,6 +65,10 @@ export function createNativePlatform(): Platform {
     setAppScheme: applyStatusBar,
     telegramInitData: () => null,
     telegramUser: () => null,
+    async openInvoice(url) {
+      window.open(url, '_system');
+      return 'pending';
+    },
     startParam: () => null,
   };
 }

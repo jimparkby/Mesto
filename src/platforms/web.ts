@@ -42,6 +42,10 @@ export function createWebPlatform(): Platform {
     setAppScheme() {},
     telegramInitData: () => null,
     telegramUser: () => null,
+    async openInvoice(url) {
+      window.open(url, '_blank', 'noopener');
+      return 'pending';
+    },
     startParam: () => new URLSearchParams(location.search).get('startapp'),
   };
 }

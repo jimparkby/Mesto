@@ -5,6 +5,7 @@ import { platform } from './platforms';
 import { applyStoredThemeSync } from './theme';
 import '@fontsource-variable/inter';
 import './styles.css';
+import './styles-v2.css';
 
 // Если приложение упало до первой отрисовки, показываем текст ошибки вместо белого экрана.
 function showFatal(message: string) {

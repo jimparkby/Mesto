@@ -1,4 +1,5 @@
-import type { EventType, Level, SportEvent, SportId } from '../../domain/types';
+import { EMPTY_RATINGS } from '../../domain/people';
+import type { Community, EventType, Level, PublicProfile, SportEvent, SportId } from '../../domain/types';
 
 interface Venue {
   name: string;
@@ -37,9 +38,40 @@ interface Template {
   registered: number;
   organizer: string;
   description: string;
+  /** Организатор — человек из DEMO_PEOPLE (тренер или игрок с профилем). */
+  organizerId?: string;
+  levels?: Level[];
 }
 
 const TEMPLATES: Template[] = [
+  {
+    title: 'Падел: тренировка в мини-группе',
+    sport: 'padel', eventType: 'training', venue: V.minskArena, dayOffset: 1, hour: 10, durationMin: 90,
+    level: 'amateur', levels: ['beginner', 'amateur'], price: 45, capacity: 4, registered: 2, organizer: 'Арсений Ковалёв',
+    organizerId: 'person-c1',
+    description: 'Ставим удар у стенки и подачу. Ракетки и мячи дам. Корт оплачен, цена за человека.',
+  },
+  {
+    title: 'Теннис: индивидуальное занятие',
+    sport: 'tennis', eventType: 'training', venue: V.dinamo, dayOffset: 2, hour: 8, durationMin: 60,
+    level: 'intermediate', levels: ['amateur', 'intermediate'], price: 60, capacity: 2, registered: 1, organizer: 'Ольга Смирнова',
+    organizerId: 'person-c2',
+    description: 'Разбор техники с видеосъёмкой, работа над бэкхендом. Подойдёт уровню NTRP 3.0–3.5.',
+  },
+  {
+    title: 'Функциональный тренинг в парке',
+    sport: 'functional', eventType: 'training', venue: V.gorky, dayOffset: 0, hour: 19, minute: 30, durationMin: 60,
+    level: 'any', price: 15, capacity: 12, registered: 7, organizer: 'Денис Орлов',
+    organizerId: 'person-c3',
+    description: 'Круговая тренировка с резинками и собственным весом. Нагрузку подберу под каждого.',
+  },
+  {
+    title: 'Падел 2×2, ищу пару',
+    sport: 'padel', eventType: 'game', venue: V.minskArena, dayOffset: 1, hour: 20, durationMin: 90,
+    level: 'intermediate', levels: ['intermediate', 'advanced'], price: 30, capacity: 4, registered: 2, organizer: 'Мария Власова',
+    organizerId: 'person-1',
+    description: 'Ищу напарника на игру. Корт оплачен. Уровень уверенный средний, играю 2 года.',
+  },
   {
     title: 'Утренняя пробежка 5 км',
     sport: 'running', eventType: 'training', venue: V.gorky, dayOffset: 0, hour: 7, minute: 30, durationMin: 50,
@@ -145,6 +177,7 @@ export function generateSeedEvents(now = new Date()): SportEvent[] {
     if (new Date(startsAt).getTime() + t.durationMin * 60_000 < now.getTime()) {
       startsAt = atLocal(t.dayOffset + 7, t.hour, t.minute, now);
     }
+    const person = t.organizerId ? DEMO_PEOPLE.find((p) => p.id === t.organizerId) : undefined;
     return {
       id: `seed-${i + 1}`,
       title: t.title,
@@ -155,19 +188,128 @@ export function generateSeedEvents(now = new Date()): SportEvent[] {
       durationMin: t.durationMin,
       venueName: t.venue.name,
       address: t.venue.address,
+      city: 'Минск',
       lat: t.venue.lat,
       lng: t.venue.lng,
       level: t.level,
+      levels: t.levels ?? (t.level !== 'any' ? [t.level] : []),
       price: t.price,
       capacity: t.capacity,
+      reserved: 0,
       registeredCount: t.registered,
-      organizerId: `org-${i + 1}`,
+      organizerId: person?.id ?? `org-${i + 1}`,
       organizerName: t.organizer,
+      organizerUsername: person?.username ?? null,
+      organizerPhotoUrl: person?.photoUrl ?? null,
+      organizerIsCoach: person?.isCoach ?? false,
+      organizerPremium: person?.premium ?? false,
+      organizerRating: person ? overall(person) : 4.5 + ((i * 7) % 6) / 10,
       status: 'published',
       createdAt: now.toISOString(),
     };
   });
 }
+
+function overall(p: PublicProfile): number | null {
+  const xs = [p.ratings.vibe, p.ratings.levelFit, p.ratings.effectiveness].filter((x): x is number => x !== null);
+  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+}
+
+type DemoPerson = Pick<PublicProfile, 'id' | 'name' | 'gender' | 'birthDate' | 'bio' | 'skills' | 'languages'> &
+  Partial<PublicProfile> & { vibe?: number; fit?: number; eff?: number; votes?: number };
+
+function person(p: DemoPerson): PublicProfile {
+  const isCoach = p.isCoach ?? false;
+  return {
+    isCoach,
+    username: null,
+    photoUrl: null,
+    city: 'Минск',
+    photos: [],
+    videos: [],
+    onboarded: true,
+    premium: false,
+    lastSeenAt: new Date(Date.now() - (p.id.length % 3) * 40 * 60_000).toISOString(),
+    createdAt: new Date(Date.now() - p.id.length * 86_400_000).toISOString(),
+    ...p,
+    ratings: p.votes
+      ? { vibe: p.vibe ?? null, levelFit: p.fit ?? null, effectiveness: p.eff ?? null, count: p.votes }
+      : EMPTY_RATINGS,
+  };
+}
+
+/** Выдуманные люди для поиска в демо-режиме. */
+export const DEMO_PEOPLE: PublicProfile[] = [
+  person({
+    id: 'person-1', name: 'Мария Власова', gender: 'female', birthDate: '2000-04-12', premium: true,
+    bio: 'Играю в падел второй год. Ищу компанию на вечерние игры :)', languages: ['Русский', 'English'],
+    skills: [{ sport: 'padel', level: 'intermediate' }, { sport: 'tennis', level: 'amateur' }],
+    vibe: 5, fit: 4.8, votes: 14,
+  }),
+  person({
+    id: 'person-2', name: 'Алексей Мартынов', gender: 'male', birthDate: '1994-09-03',
+    bio: 'Футбол по выходным, теннис по будням. Могу собрать команду 7×7.', languages: ['Русский'],
+    skills: [{ sport: 'football', level: 'advanced' }, { sport: 'tennis', level: 'intermediate' }],
+    vibe: 4.9, fit: 4.7, votes: 22,
+  }),
+  person({
+    id: 'person-3', name: 'Иван Кучеренко', gender: 'male', birthDate: '1998-01-20',
+    bio: 'Падел и сквош. Ищу партнёров уровня выше среднего.', languages: ['Русский', 'Беларуская'],
+    skills: [{ sport: 'padel', level: 'advanced' }, { sport: 'squash', level: 'intermediate' }],
+    vibe: 4.8, fit: 4.6, votes: 9,
+  }),
+  person({
+    id: 'person-4', name: 'Дарья Ковальчук', gender: 'female', birthDate: '1996-07-30',
+    bio: 'Бегаю полумарафоны, по выходным — велопрогулки вокруг Минского моря.', languages: ['Русский', 'English', 'Polski'],
+    skills: [{ sport: 'running', level: 'advanced' }, { sport: 'cycling', level: 'intermediate' }],
+    vibe: 5, fit: 5, votes: 6,
+  }),
+  person({
+    id: 'person-5', name: 'Никита Жуков', gender: 'male', birthDate: '2002-11-02',
+    bio: 'Волейбол Д3–Д4, связующий. Пляжка летом.', languages: ['Русский'],
+    skills: [{ sport: 'volleyball', level: 'intermediate' }, { sport: 'beach_volleyball', level: 'amateur' }],
+  }),
+  person({
+    id: 'person-6', name: 'Алина Сидорович', gender: 'female', birthDate: '1999-03-15',
+    bio: 'Начинаю в бадминтоне, ищу таких же новичков без давления :)', languages: ['Русский', 'Беларуская'],
+    skills: [{ sport: 'badminton', level: 'beginner' }, { sport: 'yoga', level: 'amateur' }],
+    vibe: 4.7, fit: 4.9, votes: 3,
+  }),
+  person({
+    id: 'person-c1', name: 'Арсений Ковалёв', gender: 'male', birthDate: '1990-05-08', isCoach: true, premium: true,
+    bio: 'Опыт игры — 8 лет, обучаю 3 года. Серебряный призёр чемпионата страны по паделу.', languages: ['Русский', 'English', 'Polski'],
+    skills: [{ sport: 'padel', level: 'pro', years: 3, price: 45 }],
+    vibe: 5, eff: 5, votes: 31,
+  }),
+  person({
+    id: 'person-c2', name: 'Ольга Смирнова', gender: 'female', birthDate: '1988-12-01', isCoach: true,
+    bio: 'КМС по теннису. Ставлю технику с нуля, готовлю к любительским турнирам.', languages: ['Русский', 'English'],
+    skills: [{ sport: 'tennis', level: 'pro', years: 7, price: 60 }],
+    vibe: 4.9, eff: 4.9, votes: 18,
+  }),
+  person({
+    id: 'person-c3', name: 'Денис Орлов', gender: 'male', birthDate: '1993-02-17', isCoach: true,
+    bio: 'Функциональный тренинг и ОФП для игровых видов спорта. Тренирую в парках и на площадках.', languages: ['Русский'],
+    skills: [{ sport: 'functional', level: 'pro', years: 5, price: 15 }, { sport: 'workout', level: 'advanced', years: 5, price: 15 }],
+    vibe: 4.8, eff: 4.7, votes: 12,
+  }),
+  person({
+    id: 'person-c4', name: 'Олег Петренко', gender: 'male', birthDate: '1985-06-22', isCoach: true,
+    bio: 'Тренер по футболу, работаю с взрослыми любителями и командами корпоративных лиг.', languages: ['Русский', 'Українська'],
+    skills: [{ sport: 'football', level: 'pro', years: 7, price: 40 }],
+    vibe: 4.9, eff: 4.8, votes: 25,
+  }),
+];
+
+/** Демо-комьюнити. Ссылок на настоящие чаты нет — в демо кнопка чата только показывает подсказку. */
+export const DEMO_COMMUNITIES: Community[] = [
+  { id: 'com-1', title: 'Минский падел — общий сбор', description: 'Собираем игры на неделю, ищем пары и корты.', sport: 'padel', city: 'Минск', level: 'any', tgLink: '', createdBy: 'person-c1', membersCount: 169, createdAt: new Date().toISOString() },
+  { id: 'com-2', title: 'Падел высокого уровня', description: 'Только Advanced и Pro: спарринги и турниры.', sport: 'padel', city: 'Минск', level: 'pro', tgLink: '', createdBy: 'person-3', membersCount: 53, createdAt: new Date().toISOString() },
+  { id: 'com-3', title: 'Футбол по выходным', description: 'Мини-футбол и 7×7, собираем составы на субботу и воскресенье.', sport: 'football', city: 'Минск', level: 'amateur', tgLink: '', createdBy: 'person-2', membersCount: 214, createdAt: new Date().toISOString() },
+  { id: 'com-4', title: 'Велопокатушки вокруг Минского моря', description: 'Спокойные заезды по 30–60 км, все уровни.', sport: 'cycling', city: 'Минск', level: 'any', tgLink: '', createdBy: 'person-4', membersCount: 88, createdAt: new Date().toISOString() },
+  { id: 'com-5', title: 'Волейбол Д3–Д5', description: 'Залы и пляж, игры для средних и начинающих.', sport: 'volleyball', city: 'Минск', level: 'intermediate', tgLink: '', createdBy: 'person-5', membersCount: 121, createdAt: new Date().toISOString() },
+  { id: 'com-6', title: 'Бег в Бресте', description: 'Утренние пробежки вдоль Мухавца.', sport: 'running', city: 'Брест', level: 'any', tgLink: '', createdBy: null, membersCount: 37, createdAt: new Date().toISOString() },
+];
 
 export const DEMO_PARTICIPANT_NAMES = [
   'Алексей', 'Мария', 'Дмитрий', 'Анна', 'Иван', 'Екатерина', 'Павел', 'Ольга', 'Никита',
