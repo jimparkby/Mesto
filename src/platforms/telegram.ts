@@ -32,7 +32,6 @@ interface TgWebApp {
   };
   openLink(url: string): void;
   openTelegramLink(url: string): void;
-  openInvoice?(url: string, cb: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void): void;
   CloudStorage?: {
     getItem(key: string, cb: (err: unknown, value?: string) => void): void;
     setItem(key: string, value: string, cb?: (err: unknown) => void): void;
@@ -165,13 +164,6 @@ export function createTelegramPlatform(tg: TgWebApp): Platform {
     telegramUser: () => tg.initDataUnsafe.user ?? null,
     // start_param приходит при запуске по прямой ссылке t.me/<bot>/<app>?startapp=…,
     // а при открытии из inline-кнопки бота параметр остаётся в URL.
-    openInvoice(url) {
-      if (!tg.openInvoice || !tg.isVersionAtLeast('6.1')) {
-        tg.openTelegramLink(url);
-        return Promise.resolve('pending' as const);
-      }
-      return new Promise((resolve) => tg.openInvoice!(url, (status) => resolve(status)));
-    },
     startParam: () =>
       tg.initDataUnsafe.start_param ?? new URLSearchParams(location.search).get('startapp'),
   };

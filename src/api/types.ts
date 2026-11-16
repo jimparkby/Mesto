@@ -39,14 +39,6 @@ export interface PassportUpdate extends Passport {
 
 export type MediaKind = 'photo' | 'video' | 'avatar';
 
-/** Счёт на оплату Premium: ссылка для Telegram.WebApp.openInvoice или ссылка на бота вне Telegram. */
-export interface PremiumInvoice {
-  invoiceUrl: string | null;
-  botUrl: string | null;
-  stars: number;
-  days: number;
-}
-
 /** Единый контракт данных. Реализации: Supabase (прод) и localStorage (демо без бэкенда). */
 export interface Backend {
   mode: 'supabase' | 'demo';
@@ -60,7 +52,7 @@ export interface Backend {
   resendTelegramCode(token: string): Promise<void>;
   signInWithTelegramCode(token: string, code: string): Promise<AppUser>;
   signOut(): Promise<void>;
-  /** Перечитать свой профиль (после оплаты Premium и т.п.). */
+  /** Перечитать свой профиль с сервера. */
   reloadMe(user: AppUser): Promise<AppUser>;
 
   // --- спортивный паспорт и люди ---
@@ -115,8 +107,6 @@ export interface Backend {
   listNotifications(user: AppUser): Promise<AppNotification[]>;
   markNotificationsRead(user: AppUser): Promise<void>;
 
-  // --- тренер и Premium ---
+  // --- тренер ---
   coachStats(user: AppUser, days: number, sport: string | null): Promise<CoachStats>;
-  premiumInvoice(user: AppUser): Promise<PremiumInvoice>;
-  adminSetPremium(userId: string, days: number): Promise<void>;
 }

@@ -3,19 +3,18 @@ import { levelRank } from '../domain/sports';
 import type { Level, PendingReview, PublicProfile, SportEvent, SportId } from '../domain/types';
 import type { Participant } from './types';
 
-/** Сортировка в поиске: Premium всегда выше, дальше — выбранный порядок. */
+/** Сортировка в поиске: по рейтингу, сначала новые или дешевле (тренеры). */
 export function sortPeople(list: PublicProfile[], f: { level: Level | 'all'; sport: SportId | null; sort: string }): PublicProfile[] {
   let out = list;
   if (f.level !== 'all') {
     const want = levelRank(f.level);
     out = out.filter((p) => levelRank(topLevel(p, f.sport)) === want);
   }
-  const premiumFirst = (a: PublicProfile, b: PublicProfile) => (a.premium === b.premium ? 0 : a.premium ? -1 : 1);
   if (f.sort === 'new')
-    return [...out].sort((a, b) => premiumFirst(a, b) || (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+    return [...out].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
   if (f.sort === 'price')
     return [...out].sort(
-      (a, b) => premiumFirst(a, b) || (coachPrice(a, f.sport) ?? Infinity) - (coachPrice(b, f.sport) ?? Infinity),
+      (a, b) => (coachPrice(a, f.sport) ?? Infinity) - (coachPrice(b, f.sport) ?? Infinity),
     );
   return [...out].sort(comparePeople);
 }

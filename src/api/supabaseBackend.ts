@@ -28,7 +28,6 @@ interface OrganizerEmbed {
   username: string | null;
   is_coach?: boolean;
   photo_url?: string | null;
-  premium_until?: string | null;
   rating_vibe?: number | string | null;
   rating_level_fit?: number | string | null;
   rating_effectiveness?: number | string | null;
@@ -84,7 +83,6 @@ interface ProfileRow {
   photos?: string[];
   videos?: string[];
   onboarded?: boolean;
-  premium_until?: string | null;
   last_seen_at?: string | null;
   rating_vibe?: number | string | null;
   rating_level_fit?: number | string | null;
@@ -94,7 +92,7 @@ interface ProfileRow {
 }
 
 const EVENT_EMBED_FULL =
-  '*, organizer:profiles(username, is_coach, photo_url, premium_until, rating_vibe, rating_level_fit, rating_effectiveness, rating_count)';
+  '*, organizer:profiles(username, is_coach, photo_url, rating_vibe, rating_level_fit, rating_effectiveness, rating_count)';
 const EVENT_EMBED_LEGACY = '*, organizer:profiles(username, is_coach)';
 
 const num = (x: number | string | null | undefined): number | null => (x === null || x === undefined ? null : Number(x));
@@ -113,7 +111,6 @@ function ratingsOf(r: {
   };
 }
 
-const isPremiumUntil = (until: string | null | undefined) => !!until && new Date(until).getTime() > Date.now();
 
 function toEvent(r: EventRow): SportEvent {
   const o = r.organizer;
@@ -141,7 +138,6 @@ function toEvent(r: EventRow): SportEvent {
     organizerUsername: o?.username ?? null,
     organizerPhotoUrl: o?.photo_url ?? null,
     organizerIsCoach: o?.is_coach ?? false,
-    organizerPremium: isPremiumUntil(o?.premium_until),
     organizerRating: o ? overallRating(ratingsOf(o)) : null,
     status: r.status,
     createdAt: r.created_at,
@@ -177,7 +173,6 @@ function toPublic(p: ProfileRow): PublicProfile {
     photos: p.photos ?? [],
     videos: p.videos ?? [],
     onboarded: p.onboarded ?? skills.length > 0,
-    premium: isPremiumUntil(p.premium_until),
     lastSeenAt: p.last_seen_at ?? null,
     ratings: p.rating_count !== undefined ? ratingsOf(p) : EMPTY_RATINGS,
     createdAt: p.created_at,
@@ -190,7 +185,6 @@ function toUser(p: ProfileRow): AppUser {
     telegramId: p.telegram_id,
     role: p.role,
     provider: p.telegram_id ? 'telegram' : 'guest',
-    premiumUntil: p.premium_until ?? null,
   };
 }
 
@@ -647,8 +641,6 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
         .select('*')
         .single<{ id: string; created_at: string }>();
       if (error) {
-        if (error.code === '42501' || /row-level security/i.test(error.message))
-          throw new Error('Создавать комьюнити можно с Premium');
         throw new Error(friendlyError(error));
       }
       return { ...input, id: data.id, createdBy: user.id, membersCount: 1, createdAt: data.created_at, photoUrl: null };
@@ -689,15 +681,6 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
         totalIncome: Number(s.totalIncome),
         days: s.days.map((d) => ({ ...d, income: Number(d.income) })),
       };
-    },
-
-    async premiumInvoice() {
-      return invoke('premium', { action: 'invoice' });
-    },
-
-    async adminSetPremium(userId, days) {
-      const { error } = await sb.rpc('admin_set_premium', { p_user: userId, p_days: days });
-      if (error) throw new Error(friendlyError(error));
     },
   };
   return api;

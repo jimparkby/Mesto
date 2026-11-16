@@ -1,4 +1,4 @@
-import { ChartLineUp, Crown, Desktop, MoonStars, PencilSimple, Sun, TelegramLogo } from '@phosphor-icons/react';
+import { ChartLineUp, Desktop, MoonStars, PencilSimple, Sun, TelegramLogo } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
@@ -7,7 +7,6 @@ import { Avatar } from '../components/Avatar';
 import { EventCard } from '../components/EventCard';
 import { Icon, IconTile, TILE } from '../components/Icon';
 import { LoginSheet } from '../components/LoginSheet';
-import { PremiumSheet } from '../components/PremiumSheet';
 import { ProfileView } from '../components/ProfileView';
 import { isPast } from '../domain/events';
 import type { CoachStats } from '../domain/types';
@@ -30,16 +29,11 @@ export function teamChatUrl(): string | null {
   return m ? `https://t.me/${m[1]}` : null;
 }
 
-function premiumUntil(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : '';
-}
-
 export function ProfilePage() {
   const { user, loading, error, signOut, myEventIds } = useAuth();
   const { events } = useEvents({ includeHidden: true });
   const { mode, setMode } = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
-  const [premiumOpen, setPremiumOpen] = useState(false);
   const [tab, setTab] = useState<'upcoming' | 'mine' | 'past'>('upcoming');
   const [stats, setStats] = useState<CoachStats | null>(null);
 
@@ -103,19 +97,6 @@ export function ProfilePage() {
       )}
 
       <ProfileView profile={user} events={own} />
-
-      <button type="button" className={`card premium-card${user.premium ? ' is-on' : ''}`} onClick={() => setPremiumOpen(true)}>
-        <span className="premium-card-icon">
-          <Crown size={24} weight="fill" />
-        </span>
-        <span className="grow">
-          <b>{user.premium ? 'Premium активен' : 'Mesto Premium'}</b>
-          <span className="muted">
-            {user.premium ? `до ${premiumUntil(user.premiumUntil)} · события выше в выдаче` : 'Выше в выдаче, заметный профиль, свои комьюнити'}
-          </span>
-        </span>
-        <Icon name="chevron" size={18} weight="bold" className="muted" />
-      </button>
 
       {isCoach && (
         <section className="card coach-stats-mini">
@@ -221,7 +202,6 @@ export function ProfilePage() {
 
       <p className="footer-note">Mesto {version}</p>
 
-      <PremiumSheet open={premiumOpen} onClose={() => setPremiumOpen(false)} />
     </div>
   );
 }

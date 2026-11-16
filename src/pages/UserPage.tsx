@@ -20,7 +20,6 @@ export function UserPage() {
   const toast = useToast();
   const { events } = useEvents();
   const [profile, setProfile] = useState<PublicProfile | null | undefined>(undefined);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setProfile(undefined);
@@ -65,37 +64,10 @@ export function UserPage() {
       .catch(() => {});
   };
 
-  const grantPremium = async (days: number) => {
-    setBusy(true);
-    try {
-      await api.adminSetPremium(profile.id, days);
-      setProfile(await api.getProfile(profile.id));
-      toast(days > 0 ? `Premium выдан на ${days} дней` : 'Premium снят', 'success');
-    } catch (e) {
-      toast((e as Error).message, 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <div className="page user-page">
       <h1 className="page-title">Профиль</h1>
-      <ProfileView profile={profile} events={own}>
-        {user?.role === 'admin' && api.mode === 'supabase' && (
-          <section className="card settings">
-            <div className="label">Админ</div>
-            <button className="settings-row" disabled={busy} onClick={() => grantPremium(30)}>
-              <span className="grow">{profile.premium ? 'Продлить Premium на 30 дней' : 'Выдать Premium на 30 дней'}</span>
-            </button>
-            {profile.premium && (
-              <button className="settings-row danger" disabled={busy} onClick={() => grantPremium(0)}>
-                <span className="grow">Снять Premium</span>
-              </button>
-            )}
-          </section>
-        )}
-      </ProfileView>
+      <ProfileView profile={profile} events={own} />
 
       {user?.id !== profile.id && (
         <div className="action-bar">

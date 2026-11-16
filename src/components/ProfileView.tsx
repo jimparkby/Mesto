@@ -9,7 +9,7 @@ import type { PublicProfile, SportEvent, SportId } from '../domain/types';
 import { CoachSessionCard } from './GameCards';
 import { Icon } from './Icon';
 import { LevelsInfoSheet } from './LevelsInfoSheet';
-import { PersonAvatar, PremiumBadge } from './People';
+import { PersonAvatar } from './People';
 import { Sheet } from './Sheet';
 import { SportIcon } from './SportIcon';
 
@@ -43,12 +43,11 @@ export function ProfileView({
 
   return (
     <>
-      <section className={`card profile-card${p.premium ? ' is-premium' : ''}`}>
-        <PersonAvatar name={p.name} photoUrl={p.photoUrl} size={64} premium={p.premium} online={online} />
+      <section className={`card profile-card`}>
+        <PersonAvatar name={p.name} photoUrl={p.photoUrl} size={64} online={online} />
         <div className="profile-card-body">
           <div className="profile-card-name">
             {p.name}
-            {p.premium && <PremiumBadge small />}
           </div>
           <button type="button" className="profile-card-ratings" onClick={() => setRatingInfo(true)}>
             {p.isCoach ? (

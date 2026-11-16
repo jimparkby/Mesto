@@ -65,10 +65,6 @@ export function createNativePlatform(): Platform {
     setAppScheme: applyStatusBar,
     telegramInitData: () => null,
     telegramUser: () => null,
-    async openInvoice(url) {
-      window.open(url, '_system');
-      return 'pending';
-    },
     startParam: () => null,
   };
 }

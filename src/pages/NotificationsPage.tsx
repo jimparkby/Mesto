@@ -1,4 +1,4 @@
-import { Bell, CalendarX, ChatText, CheckCircle, Crown, Star, UserPlus, XCircle, HandWaving } from '@phosphor-icons/react';
+import { Bell, CalendarX, ChatText, CheckCircle, Star, UserPlus, XCircle, HandWaving } from '@phosphor-icons/react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -11,7 +11,6 @@ const ICONS: Record<NotificationKind, { Glyph: typeof Bell; color: string }> = {
   request_rejected: { Glyph: XCircle, color: '#ff3b30' },
   comment: { Glyph: ChatText, color: '#5856d6' },
   rate_reminder: { Glyph: Star, color: '#ff9500' },
-  premium: { Glyph: Crown, color: '#c98a12' },
   event_cancelled: { Glyph: CalendarX, color: '#8e8e93' },
 };
 
@@ -25,7 +24,7 @@ function ago(iso: string): string {
   return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 }
 
-/** Уведомления: заявки, решения организаторов, комментарии, напоминания оценить игру, Premium. */
+/** Уведомления: заявки, решения организаторов, комментарии, напоминания оценить игру. */
 export function NotificationsPage() {
   const { user, notifications, markNotificationsRead, refreshNotifications } = useAuth();
   const navigate = useNavigate();

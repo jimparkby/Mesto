@@ -1,4 +1,4 @@
-import { Crown, Star } from '@phosphor-icons/react';
+import { Star } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { ageFrom, coachPrice, coachYears, formatRating, genderLabel, isOnline, overallRating, priceLabel, telegramLink, yearsLabel } from '../domain/people';
 import { levelLabel, sportMeta } from '../domain/sports';
@@ -18,37 +18,21 @@ export function RatingBadge({ ratings, value, className = '' }: { ratings?: Rati
   );
 }
 
-export function PremiumBadge({ small }: { small?: boolean }) {
-  return (
-    <span className={`premium-badge${small ? ' is-small' : ''}`} title="Premium">
-      <Crown size={small ? 12 : 14} weight="fill" />
-      {!small && 'Premium'}
-    </span>
-  );
-}
-
-/** Аватар с отметкой «онлайн» и золотым кольцом у Premium. */
+/** Аватар с отметкой «онлайн». */
 export function PersonAvatar({
   name,
   photoUrl,
   size = 48,
-  premium,
   online,
 }: {
   name: string;
   photoUrl?: string | null;
   size?: number;
-  premium?: boolean;
   online?: boolean;
 }) {
   return (
-    <span className={`person-avatar${premium ? ' is-premium' : ''}`} style={{ width: size, height: size }}>
+    <span className="person-avatar" style={{ width: size, height: size }}>
       <Avatar name={name} photoUrl={photoUrl} size={size} />
-      {premium && (
-        <span className="person-avatar-crown" aria-hidden>
-          <Crown size={Math.max(10, size * 0.24)} weight="fill" />
-        </span>
-      )}
       {online && <span className="person-avatar-online" aria-label="онлайн" />}
     </span>
   );
@@ -80,13 +64,12 @@ export function PersonCard({ p, sport }: { p: PublicProfile; sport?: SportId | n
   };
 
   return (
-    <Link to={`/user/${p.id}`} className={`card person-card${p.premium ? ' is-premium' : ''}`}>
+    <Link to={`/user/${p.id}`} className="card person-card">
       <div className="person-card-head">
-        <PersonAvatar name={p.name} photoUrl={p.photoUrl} premium={p.premium} online={isOnline(p.lastSeenAt)} />
+        <PersonAvatar name={p.name} photoUrl={p.photoUrl} online={isOnline(p.lastSeenAt)} />
         <div className="person-card-id">
           <div className="person-card-name">
             {p.name}
-            {p.premium && <PremiumBadge small />}
           </div>
           <RatingBadge ratings={p.ratings} />
         </div>

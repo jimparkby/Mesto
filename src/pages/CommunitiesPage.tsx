@@ -4,7 +4,6 @@ import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Icon } from '../components/Icon';
 import { LoginSheet } from '../components/LoginSheet';
-import { PremiumSheet } from '../components/PremiumSheet';
 import { Sheet } from '../components/Sheet';
 import { SportIcon } from '../components/SportIcon';
 import { SportPicker } from '../components/SportPicker';
@@ -33,7 +32,6 @@ export function CommunitiesPage() {
   const [open, setOpen] = useState<Community | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [premiumOpen, setPremiumOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -59,7 +57,6 @@ export function CommunitiesPage() {
 
   const startCreate = () => {
     if (!user) return setLoginOpen(true);
-    if (!user.premium && user.role !== 'admin') return setPremiumOpen(true);
     setCreateOpen(true);
   };
 
@@ -233,7 +230,6 @@ export function CommunitiesPage() {
           await load();
         }}
       />
-      <PremiumSheet open={premiumOpen} onClose={() => setPremiumOpen(false)} reason="Создавать свои комьюнити можно с Premium." />
       <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} reason="Войдите, чтобы вступать в комьюнити" />
     </div>
   );

@@ -19,7 +19,7 @@ interface AuthState {
   /** Сохранить спортивный паспорт (регистрация и редактирование профиля). */
   savePassport(update: PassportUpdate): Promise<AppUser>;
   uploadMedia(file: File, kind: MediaKind): Promise<string>;
-  /** Перечитать профиль с сервера (после оплаты Premium). */
+  /** Перечитать профиль с сервера. */
   reloadMe(): Promise<void>;
   refreshMyEvents(): Promise<void>;
   /** Возвращает статус заявки после записи (null — запись отменена). */

@@ -1,7 +1,5 @@
 export type PlatformKind = 'telegram' | 'native' | 'web';
 
-export type InvoiceStatus = 'paid' | 'cancelled' | 'failed' | 'pending';
-
 export type HapticKind = 'light' | 'medium' | 'success' | 'error' | 'selection';
 
 export interface TelegramUserInfo {
@@ -35,8 +33,6 @@ export interface Platform {
   /** Подписанные данные запуска Telegram (для проверки на сервере). */
   telegramInitData(): string | null;
   telegramUser(): TelegramUserInfo | null;
-  /** Оплатить счёт (Telegram Stars). Вне Telegram открывает ссылку и возвращает pending. */
-  openInvoice(url: string): Promise<InvoiceStatus>;
   /** Параметр ?startapp=… из ссылки на Mini App. */
   startParam(): string | null;
 }

@@ -8,7 +8,7 @@ import { eventTypeLabel, levelsLabel, sportMeta } from '../domain/sports';
 import type { LatLng, SportEvent } from '../domain/types';
 import { useToast } from '../state';
 import { LoginSheet } from './LoginSheet';
-import { PersonAvatar, PremiumBadge, RatingBadge } from './People';
+import { PersonAvatar, RatingBadge } from './People';
 import { SportIcon } from './SportIcon';
 
 /** «2/4» — сколько мест занято с учётом мест, занятых вне приложения. */
@@ -77,13 +77,12 @@ export function GameCard({ event: e, location }: { event: SportEvent; location?:
   const q = useQuickJoin(e);
   return (
     <>
-      <Link to={`/event/${e.id}`} className={`card game-card${e.organizerPremium ? ' is-premium' : ''}`}>
+      <Link to={`/event/${e.id}`} className={`card game-card`}>
         <div className="game-card-head">
-          <PersonAvatar name={e.organizerName || 'Организатор'} photoUrl={e.organizerPhotoUrl} size={40} premium={e.organizerPremium} />
+          <PersonAvatar name={e.organizerName || 'Организатор'} photoUrl={e.organizerPhotoUrl} size={40} />
           <div className="game-card-org">
             <div className="game-card-org-name">
               {e.organizerName || 'Организатор'}
-              {e.organizerPremium && <PremiumBadge small />}
             </div>
             <RatingBadge value={e.organizerRating ?? null} />
           </div>
@@ -124,9 +123,9 @@ export function CoachSessionCard({ event: e }: { event: SportEvent }) {
   const q = useQuickJoin(e);
   return (
     <>
-      <Link to={`/event/${e.id}`} className={`card coach-card${e.organizerPremium ? ' is-premium' : ''}`}>
+      <Link to={`/event/${e.id}`} className={`card coach-card`}>
         <div className="coach-card-head">
-          <PersonAvatar name={e.organizerName} photoUrl={e.organizerPhotoUrl} size={40} premium={e.organizerPremium} />
+          <PersonAvatar name={e.organizerName} photoUrl={e.organizerPhotoUrl} size={40} />
           <div className="coach-card-id">
             <div className="coach-card-name">{e.organizerName}</div>
             <RatingBadge value={e.organizerRating ?? null} />

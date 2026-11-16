@@ -22,8 +22,6 @@
   --primary-fill: var(--accent-fill); /* заливка основных кнопок */
   --primary-soft: rgba(242, 184, 168, 0.13);
   --on-primary: #ffffff;
-  --premium: #e8b04a;
-  --premium-soft: rgba(232, 176, 74, 0.16);
 
   --bg: #140b0d;
   --surface: #201316;
@@ -80,8 +78,6 @@
   --primary: #9e212e;
   --primary-press: #86202a;
   --primary-soft: rgba(158, 33, 46, 0.08);
-  --premium: #c98a12;
-  --premium-soft: rgba(201, 138, 18, 0.12);
   --success: #1f9d55;
   --success-soft: rgba(31, 157, 85, 0.11);
   --warn: #d9720b;

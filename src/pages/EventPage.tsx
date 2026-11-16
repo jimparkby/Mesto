@@ -14,7 +14,7 @@ import { MapView } from '../components/MapView';
 import { formatPrice, formatWhen, isFull, isPast, pluralPlaces, spotsLeft } from '../domain/events';
 import { Comments } from '../components/Comments';
 import { eventLevels, takenLabel } from '../components/GameCards';
-import { PersonAvatar, PremiumBadge, RatingBadge } from '../components/People';
+import { PersonAvatar, RatingBadge } from '../components/People';
 import { sportMeta } from '../domain/sports';
 import type { EventStatus, SportEvent } from '../domain/types';
 import { platform } from '../platforms';
@@ -208,16 +208,15 @@ export function EventPage() {
         </div>
       )}
 
-      <section className={`card organizer-card2${event.organizerPremium ? ' is-premium' : ''}`}>
+      <section className={`card organizer-card2`}>
         <h2 className="card-h">{event.organizerIsCoach ? 'Тренер' : 'Организатор'}</h2>
         <div className="organizer-row">
           {event.organizerId ? (
             <Link to={`/user/${event.organizerId}`} className="organizer-person" aria-label="Профиль организатора">
-              <PersonAvatar name={event.organizerName || 'Организатор'} photoUrl={event.organizerPhotoUrl} size={52} premium={event.organizerPremium} />
+              <PersonAvatar name={event.organizerName || 'Организатор'} photoUrl={event.organizerPhotoUrl} size={52} />
               <span className="organizer-id">
                 <b>
                   {event.organizerName || 'Не указан'}
-                  {event.organizerPremium && <PremiumBadge small />}
                 </b>
                 <RatingBadge value={event.organizerRating ?? null} />
               </span>

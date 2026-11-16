@@ -202,7 +202,6 @@ export function generateSeedEvents(now = new Date()): SportEvent[] {
       organizerUsername: person?.username ?? null,
       organizerPhotoUrl: person?.photoUrl ?? null,
       organizerIsCoach: person?.isCoach ?? false,
-      organizerPremium: person?.premium ?? false,
       organizerRating: person ? overall(person) : 4.5 + ((i * 7) % 6) / 10,
       status: 'published',
       createdAt: now.toISOString(),
@@ -228,7 +227,6 @@ function person(p: DemoPerson): PublicProfile {
     photos: [],
     videos: [],
     onboarded: true,
-    premium: false,
     lastSeenAt: new Date(Date.now() - (p.id.length % 3) * 40 * 60_000).toISOString(),
     createdAt: new Date(Date.now() - p.id.length * 86_400_000).toISOString(),
     ...p,
@@ -241,7 +239,7 @@ function person(p: DemoPerson): PublicProfile {
 /** Выдуманные люди для поиска в демо-режиме. */
 export const DEMO_PEOPLE: PublicProfile[] = [
   person({
-    id: 'person-1', name: 'Мария Власова', gender: 'female', birthDate: '2000-04-12', premium: true,
+    id: 'person-1', name: 'Мария Власова', gender: 'female', birthDate: '2000-04-12',
     bio: 'Играю в падел второй год. Ищу компанию на вечерние игры :)', languages: ['Русский', 'English'],
     skills: [{ sport: 'padel', level: 'intermediate' }, { sport: 'tennis', level: 'amateur' }],
     vibe: 5, fit: 4.8, votes: 14,
@@ -276,7 +274,7 @@ export const DEMO_PEOPLE: PublicProfile[] = [
     vibe: 4.7, fit: 4.9, votes: 3,
   }),
   person({
-    id: 'person-c1', name: 'Арсений Ковалёв', gender: 'male', birthDate: '1990-05-08', isCoach: true, premium: true,
+    id: 'person-c1', name: 'Арсений Ковалёв', gender: 'male', birthDate: '1990-05-08', isCoach: true,
     bio: 'Опыт игры — 8 лет, обучаю 3 года. Серебряный призёр чемпионата страны по паделу.', languages: ['Русский', 'English', 'Polski'],
     skills: [{ sport: 'padel', level: 'pro', years: 3, price: 45 }],
     vibe: 5, eff: 5, votes: 31,

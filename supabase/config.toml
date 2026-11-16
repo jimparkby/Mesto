@@ -21,7 +21,3 @@ verify_jwt = false
 # Уведомления о заявках: вызывается из приложения с JWT пользователя.
 [functions.registration-notify]
 verify_jwt = true
-
-# Счёт на Premium (Telegram Stars): вызывается из приложения с JWT пользователя.
-[functions.premium]
-verify_jwt = true

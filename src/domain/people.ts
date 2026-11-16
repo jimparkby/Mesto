@@ -108,9 +108,8 @@ export function telegramLink(username: string | null | undefined): string | null
   return username ? `https://t.me/${username}` : null;
 }
 
-/** Премиум-профили выше, затем по рейтингу и числу оценок. */
+/** По рейтингу, затем по числу оценок. */
 export function comparePeople(a: PublicProfile, b: PublicProfile): number {
-  if (a.premium !== b.premium) return a.premium ? -1 : 1;
   const ra = overallRating(a.ratings) ?? 0;
   const rb = overallRating(b.ratings) ?? 0;
   if (rb !== ra) return rb - ra;

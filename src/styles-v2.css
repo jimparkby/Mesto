@@ -1,5 +1,5 @@
 /* =====================================================================
-   Mesto 2.0: спортивный паспорт, поиск, комьюнити, оценки, Premium.
+   Mesto 2.0: спортивный паспорт, поиск, комьюнити, оценки.
    Подключается после styles.css и использует его токены темы.
    ===================================================================== */
 
@@ -212,7 +212,7 @@
   font-weight: 800;
 }
 
-/* ---------- Люди: рейтинг, Premium, аватар ---------- */
+/* ---------- Люди: рейтинг, аватар ---------- */
 .rating {
   display: inline-flex;
   align-items: center;
@@ -225,22 +225,6 @@
   color: var(--faint);
   font-weight: 500;
 }
-.premium-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--premium-soft);
-  color: var(--premium);
-  font-size: 12px;
-  font-weight: 700;
-  vertical-align: middle;
-}
-.premium-badge.is-small {
-  padding: 2px 5px;
-  margin-left: 6px;
-}
 .person-avatar {
   position: relative;
   flex: none;
@@ -252,21 +236,6 @@
   display: grid;
   place-items: center;
   object-fit: cover;
-}
-.person-avatar.is-premium .avatar {
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--premium);
-}
-.person-avatar-crown {
-  position: absolute;
-  right: -3px;
-  bottom: -3px;
-  display: grid;
-  place-items: center;
-  padding: 3px;
-  border-radius: 50%;
-  background: var(--premium);
-  color: #fff;
-  box-shadow: 0 0 0 2px var(--surface);
 }
 .person-avatar-online {
   position: absolute;
@@ -286,13 +255,6 @@
 .coach-card,
 .organizer-card2 {
   border: 1.5px solid transparent;
-}
-.person-card.is-premium,
-.game-card.is-premium,
-.coach-card.is-premium,
-.profile-card.is-premium,
-.organizer-card2.is-premium {
-  border-color: var(--premium);
 }
 .person-card {
   display: flex;
@@ -632,81 +594,6 @@
 .community-members {
   font-size: 13px;
   color: var(--muted);
-}
-
-/* ---------- Premium ---------- */
-.premium-hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 18px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(232, 176, 74, 0.22), rgba(158, 33, 46, 0.12));
-  color: var(--premium);
-  text-align: center;
-}
-.premium-hero b {
-  color: var(--text);
-  font-size: 17px;
-}
-.premium-perks {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.premium-perks li {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-.premium-perks li > span:last-child {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.premium-perk-icon {
-  flex: none;
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: var(--premium-soft);
-  color: var(--premium);
-}
-.premium-note {
-  text-align: center;
-}
-.premium-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  border: 1.5px solid var(--premium-soft);
-  color: var(--text);
-  text-align: left;
-}
-.premium-card .grow {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.premium-card.is-on {
-  border-color: var(--premium);
-}
-.premium-card-icon {
-  flex: none;
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #f4c766, #c98a12);
-  color: #fff;
 }
 
 /* ---------- Профиль (спортивный паспорт) ---------- */

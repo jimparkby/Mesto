@@ -193,7 +193,6 @@ export function SearchPage() {
             </button>
           ))}
         </div>
-        <p className="hint">Профили с Premium всегда показываются выше.</p>
       </Sheet>
     </div>
   );

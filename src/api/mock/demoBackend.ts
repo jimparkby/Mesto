@@ -24,7 +24,6 @@ import { DEMO_COMMUNITIES, DEMO_PARTICIPANT_NAMES, DEMO_PEOPLE, generateSeedEven
 
 const STATE_KEY = 'sr_demo_state_v3';
 const USER_KEY = 'sr_demo_user_v2';
-const PREMIUM_DAYS = 30;
 
 interface Registration {
   eventId: string;
@@ -141,8 +140,6 @@ function emptyUser(base: Pick<AppUser, 'id' | 'name' | 'provider'> & Partial<App
     photos: [],
     videos: [],
     isCoach: false,
-    premium: false,
-    premiumUntil: null,
     onboarded: false,
     lastSeenAt: new Date().toISOString(),
     ratings: EMPTY_RATINGS,
@@ -157,7 +154,7 @@ async function readUser(): Promise<AppUser | null> {
   if (!raw) return null;
   try {
     const u = JSON.parse(raw) as AppUser;
-    return { ...u, premium: !!u.premiumUntil && new Date(u.premiumUntil).getTime() > Date.now() };
+    return u;
   } catch {
     return null;
   }
@@ -355,7 +352,6 @@ export function createDemoBackend(): Backend {
         organizerUsername: organizer.username ?? null,
         organizerPhotoUrl: organizer.photoUrl ?? null,
         organizerIsCoach: organizer.isCoach,
-        organizerPremium: organizer.premium,
         organizerRating: null,
         status: 'published',
         createdAt: new Date().toISOString(),
@@ -535,7 +531,6 @@ export function createDemoBackend(): Backend {
     },
 
     async createCommunity(input, user) {
-      if (!user.premium && user.role !== 'admin') throw new Error('Создавать комьюнити можно с Premium');
       const s = load();
       const c: Community = { ...input, id: uid('com'), createdBy: user.id, membersCount: 1, createdAt: new Date().toISOString(), photoUrl: null };
       s.communities.unshift(c);
@@ -619,18 +614,6 @@ export function createDemoBackend(): Backend {
         totalIncome: income(0, now),
       };
     },
-
-    async premiumInvoice(user) {
-      // В демо оплаты нет — Premium включается сразу, чтобы можно было посмотреть, как он работает.
-      const until = new Date(Date.now() + PREMIUM_DAYS * 86_400_000).toISOString();
-      await persistUser({ ...user, premium: true, premiumUntil: until });
-      const s = load();
-      notify(s, user.id, 'premium', 'Premium активен ⭐', 'Демо-режим: оплата не списывается.', '/profile');
-      save(s);
-      return { invoiceUrl: null, botUrl: null, stars: 0, days: PREMIUM_DAYS };
-    },
-
-    async adminSetPremium() {},
   };
   return api;
 }

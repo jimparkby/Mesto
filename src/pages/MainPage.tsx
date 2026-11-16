@@ -13,9 +13,8 @@ import type { SportEvent, SportId } from '../domain/types';
 import { useEvents, useGeolocation } from '../hooks';
 import { useCity, useFilters } from '../state';
 
-/** Premium-организаторы выше, дальше — по времени начала. */
+/** По времени начала. */
 function byPriority(a: SportEvent, b: SportEvent): number {
-  if (!!a.organizerPremium !== !!b.organizerPremium) return a.organizerPremium ? -1 : 1;
   return a.startsAt.localeCompare(b.startsAt);
 }
 

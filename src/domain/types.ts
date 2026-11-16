@@ -55,8 +55,6 @@ export interface SportEvent {
   organizerPhotoUrl?: string | null;
   /** Организатор — тренер: событие попадает в «Занятия с тренером». */
   organizerIsCoach?: boolean;
-  /** Организатор с Premium: событие выше в выдаче и заметнее. */
-  organizerPremium?: boolean;
   /** Общий рейтинг организатора (1–5), null — оценок ещё нет. */
   organizerRating?: number | null;
   status: EventStatus;
@@ -121,7 +119,6 @@ export interface PublicProfile extends Passport {
   name: string;
   username?: string | null;
   photoUrl?: string | null;
-  premium: boolean;
   /** Паспорт заполнен (регистрация пройдена). */
   onboarded: boolean;
   lastSeenAt: string | null;
@@ -133,7 +130,6 @@ export interface AppUser extends PublicProfile {
   telegramId?: number | null;
   role: 'user' | 'admin';
   provider: AuthProviderKind;
-  premiumUntil: string | null;
 }
 
 export interface LatLng {
@@ -190,7 +186,6 @@ export type NotificationKind =
   | 'request_rejected'
   | 'comment'
   | 'rate_reminder'
-  | 'premium'
   | 'event_cancelled';
 
 export interface AppNotification {
