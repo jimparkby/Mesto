@@ -2978,3 +2978,189 @@ a.person:active {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ===== «Назад» и «На главную» на внутренних страницах ===== */
+.subnav {
+  position: fixed;
+  z-index: 30;
+  top: calc(20px + var(--safe-top));
+  left: max(28px, calc(50% - 320px + 28px));
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--blur-bg);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow: var(--shadow-float);
+}
+.subnav-btn {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text);
+}
+.subnav-btn:active {
+  background: var(--component);
+  transform: scale(0.94);
+}
+/* Под кнопками — отступ, чтобы они не наезжали на заголовок; у события кнопки лежат поверх цветной шапки. */
+.app:has(.subnav) .page:not(.event-page) {
+  padding-top: calc(60px + var(--safe-top));
+}
+.event-page .event-hero {
+  padding-top: 64px;
+}
+
+/* ===== Карта события: кнопка «на весь экран» ===== */
+.map-card {
+  position: relative;
+}
+.map-expand-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #111;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.map-expand-btn:active {
+  transform: scale(0.94);
+}
+.map-card .route-btn {
+  color: #111;
+}
+.map-full-actions {
+  display: flex;
+  gap: 10px;
+}
+.map-full-actions .btn {
+  margin: 0;
+}
+.map-full-actions .btn-ghost {
+  background: var(--elevated);
+}
+.map-full-actions .btn-grow {
+  min-height: 54px;
+}
+
+/* ===== Создание события по шагам ===== */
+.wizard-progress {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.wizard-progress span {
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--component);
+  transition: background 0.2s;
+}
+.wizard-progress span.is-on {
+  background: var(--primary);
+}
+.sport-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.sport-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 104px;
+  padding: 14px 6px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.sport-tile:active {
+  transform: scale(0.96);
+}
+.sport-tile.is-on {
+  border-color: var(--sport);
+}
+.sport-tile-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--sport) 16%, transparent);
+}
+.sport-tile-label {
+  text-align: center;
+  line-height: 1.2;
+}
+.wizard-sport {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.wizard-sport .link {
+  margin-left: auto;
+}
+.wizard-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.wizard-actions .btn-grow {
+  min-height: 58px;
+}
+.wizard-summary {
+  display: flex;
+  flex-direction: column;
+}
+.summary-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  text-align: left;
+  font-size: 15px;
+}
+.summary-row:first-of-type {
+  border-top: none;
+}
+.summary-label {
+  flex: none;
+  width: 96px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.summary-value {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.big-header .big-extra:has(.wizard-progress) {
+  align-self: stretch;
+  width: 100%;
+}

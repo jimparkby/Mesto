@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { CaretLeft } from '@phosphor-icons/react';
 import { platform } from '../platforms';
 import { Icon, type IconName } from './Icon';
 
@@ -35,10 +36,32 @@ export function Layout() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  const goBack = () => {
+    platform.haptic('selection');
+    if (location.key === 'default') navigate('/', { replace: true });
+    else navigate(-1);
+  };
+  const goHome = () => {
+    platform.haptic('selection');
+    navigate('/');
+  };
+
   return (
     <div
       className={`app${location.pathname === '/map' ? ' is-fullbleed' : ''}`}
     >
+      {/* На внутренних страницах (событие, профиль участника) — свои «Назад» и «На главную»:
+          в браузере и не во всех клиентах Telegram системной кнопки нет. */}
+      {!isRoot && (
+        <div className="subnav">
+          <button type="button" className="subnav-btn" onClick={goBack} aria-label="Назад">
+            <CaretLeft size={20} weight="bold" />
+          </button>
+          <button type="button" className="subnav-btn" onClick={goHome} aria-label="На главную">
+            <Icon name="home" size={20} />
+          </button>
+        </div>
+      )}
       <main className="app-main">
         <Outlet />
       </main>

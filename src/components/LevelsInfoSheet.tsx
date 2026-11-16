@@ -11,6 +11,8 @@ interface Props {
   onClose: () => void;
   /** Вид спорта, чья справка откроется сразу; иначе — список видов спорта. */
   initialSport?: SportId | null;
+  /** Только справка по initialSport — без переключения на другие виды спорта (карточка события, создание). */
+  lockSport?: boolean;
 }
 
 function pluralDivisions(n: number): string {
@@ -22,7 +24,8 @@ function pluralDivisions(n: number): string {
 }
 
 /** Справка по уровням: список видов спорта и отдельное окно с делениями каждого из них. */
-export function LevelsInfoSheet({ open, onClose, initialSport = null }: Props) {
+export function LevelsInfoSheet({ open, onClose, initialSport = null, lockSport = false }: Props) {
+  const locked = lockSport && !!initialSport;
   const [selected, setSelected] = useState<SportId | null>(initialSport);
 
   useEffect(() => {
@@ -64,22 +67,24 @@ export function LevelsInfoSheet({ open, onClose, initialSport = null }: Props) {
 
       {selected && scale && (
         <>
-          <div className="chips-wrap level-sport-chips">
-            {SPORT_SCALES.map((s) => {
-              const on = s.sport === selected;
-              const m = sportMeta(s.sport);
-              return (
-                <button
-                  key={s.sport}
-                  className={`chip${on ? ' is-on' : ''}`}
-                  onClick={() => setSelected(s.sport)}
-                >
-                  <SportIcon sport={s.sport} size={16} color={on ? undefined : m.color} />
-                  {m.label}
-                </button>
-              );
-            })}
-          </div>
+          {!locked && (
+            <div className="chips-wrap level-sport-chips">
+              {SPORT_SCALES.map((s) => {
+                const on = s.sport === selected;
+                const m = sportMeta(s.sport);
+                return (
+                  <button
+                    key={s.sport}
+                    className={`chip${on ? ' is-on' : ''}`}
+                    onClick={() => setSelected(s.sport)}
+                  >
+                    <SportIcon sport={s.sport} size={16} color={on ? undefined : m.color} />
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {scale.note && <p className="hint">{scale.note}</p>}
           <ul className="level-list">
             {scale.divisions.map((d) => (
@@ -96,7 +101,7 @@ export function LevelsInfoSheet({ open, onClose, initialSport = null }: Props) {
       )}
 
       <div className="sheet-actions">
-        {selected ? (
+        {selected && !locked ? (
           <button className="btn btn-ghost" onClick={() => setSelected(null)}>
             Все виды спорта
           </button>

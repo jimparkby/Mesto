@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Info } from '@phosphor-icons/react';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { LevelsInfoSheet } from '../components/LevelsInfoSheet';
@@ -7,14 +8,13 @@ import { LoginSheet } from '../components/LoginSheet';
 import { MapPicker } from '../components/MapPicker';
 import { PageHeader } from '../components/PageHeader';
 import { SportIcon } from '../components/SportIcon';
-import { Icon } from '../components/Icon';
 import { distanceKm, formatDistance } from '../domain/events';
 import { geocodeAddress, reverseGeocode, SAME_PLACE_M } from '../domain/geocode';
 import { scaleFor, withDivisionTag } from '../domain/levels';
 import { LEVELS, SPORTS, EVENT_TYPES } from '../domain/sports';
 import type { EventType, LatLng, Level, SportId } from '../domain/types';
+import { platform } from '../platforms';
 import { useToast } from '../state';
-import { CaretDown, Info } from '@phosphor-icons/react';
 
 /** Поиск координат по адресу: идёт, нашли, не нашли. */
 type AddressLookup = { state: 'idle' } | { state: 'searching' } | { state: 'found'; point: LatLng } | { state: 'missing' };
@@ -27,25 +27,20 @@ function defaultDateTime(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-type Section = 'sport' | 'when' | 'where' | 'more';
+/** Создание события по шагам, как регистрация: одно окно — один вопрос. */
+const STEPS = [
+  { id: 'sport', title: 'Какой вид спорта?' },
+  { id: 'about', title: 'Название и уровень' },
+  { id: 'when', title: 'Когда?' },
+  { id: 'where', title: 'Где?' },
+  { id: 'details', title: 'Последние детали' },
+] as const;
+type StepId = (typeof STEPS)[number]['id'];
 
-interface ExpandableSectionProps {
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}
+const DURATIONS = [30, 45, 60, 90, 120, 150, 180];
 
-function ExpandableSection({ title, open, onToggle, children }: ExpandableSectionProps) {
-  return (
-    <div className="expandable">
-      <button className={`expandable-header${open ? ' is-open' : ''}`} onClick={onToggle} aria-expanded={open}>
-        <span className="expandable-title">{title}</span>
-        <CaretDown size={18} weight="bold" className="expandable-chevron" />
-      </button>
-      {open && <div className="expandable-body">{children}</div>}
-    </div>
-  );
+function durationLabel(m: number): string {
+  return m < 60 ? `${m} мин` : `${m / 60} ч`.replace('.5', ',5');
 }
 
 export function CreateEventPage() {
@@ -54,7 +49,7 @@ export function CreateEventPage() {
   const toast = useToast();
   const [loginOpen, setLoginOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [openSection, setOpenSection] = useState<Section>('sport');
+  const [step, setStep] = useState(0);
 
   // Тренер выставляет объявление о тренировке по своему виду спорта.
   const [sport, setSport] = useState<SportId>(() => user?.coach?.sports[0] ?? 'football');
@@ -76,6 +71,10 @@ export function CreateEventPage() {
   const [division, setDivision] = useState<string | null>(null);
   const [price, setPrice] = useState(0);
   const [capacity, setCapacity] = useState(10);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step]);
 
   // Адрес → координаты (с паузой после ввода). Адрес, подставленный по точке, не ищем.
   const addressText = address.trim();
@@ -120,14 +119,30 @@ export function CreateEventPage() {
   const place = point ?? addressPoint;
   const mismatchKm = point && addressPoint ? distanceKm(point, addressPoint) : 0;
   const mismatch = mismatchKm * 1000 > SAME_PLACE_M;
-
-  const errors: string[] = [];
-  if (title.trim().length < 3) errors.push('название');
-  if (!point && !addressText) errors.push('адрес или точку на карте');
-  else if (!point && lookup.state === 'missing') errors.push('адрес, который есть на карте, или отметьте точку');
-  else if (mismatch) errors.push('одно место: адрес и точка на карте не совпадают');
-  if (new Date(when).getTime() < Date.now()) errors.push('дату в будущем');
   const searching = !point && lookup.state === 'searching';
+
+  /** Что не так на каждом шаге; пусто — можно дальше. */
+  const stepError = (id: StepId): string | null => {
+    if (id === 'about' && title.trim().length < 3) return 'Введите название — хотя бы 3 символа';
+    if (id === 'when' && new Date(when).getTime() < Date.now()) return 'Выберите дату и время в будущем';
+    if (id === 'where') {
+      if (!point && !addressText) return 'Укажите адрес или отметьте точку на карте';
+      if (searching) return 'Ищем адрес на карте…';
+      if (!point && lookup.state === 'missing') return 'Адрес не нашли на карте — уточните его или отметьте точку';
+      if (mismatch) return 'Адрес и точка на карте не совпадают — выберите, что верно';
+      if (!place) return 'Укажите адрес или отметьте точку на карте';
+    }
+    return null;
+  };
+
+  const current = STEPS[step];
+  const currentError = stepError(current.id);
+  const last = step === STEPS.length - 1;
+
+  const go = (next: number) => {
+    platform.haptic('selection');
+    setStep(next);
+  };
 
   const changeAddress = (v: string) => {
     setAddress(v);
@@ -147,18 +162,32 @@ export function CreateEventPage() {
     } else toast('Не удалось определить адрес точки — поправьте адрес вручную', 'error');
   };
 
+  const chooseSport = (id: SportId) => {
+    if (id !== sport) {
+      setSport(id);
+      setDivision(null);
+      setLevel('any');
+    }
+    go(1);
+  };
+
   const submit = async (ev: FormEvent) => {
     ev.preventDefault();
+    if (!last) {
+      if (!currentError) go(step + 1);
+      return;
+    }
     if (!user) {
       setLoginOpen(true);
       return;
     }
-    if (searching) {
-      toast('Ищем адрес на карте, секунду…', 'info');
-      return;
-    }
-    if (errors.length || !place) {
-      toast(`Укажите ${errors.join(', ')}`, 'error');
+    // Все шаги ещё раз: вдруг дата успела уйти в прошлое, пока заполняли.
+    const bad = STEPS.findIndex((s) => stepError(s.id));
+    if (bad !== -1 || !place) {
+      if (bad !== -1) {
+        toast(stepError(STEPS[bad].id)!, 'error');
+        setStep(bad);
+      }
       return;
     }
     setBusy(true);
@@ -195,18 +224,23 @@ export function CreateEventPage() {
   // Дивизионы вместо «Новичок/Продвинутый» — там, где по ним реально собирают игры (волейбол: Д1–Д5).
   const divisionScale = sport === 'volleyball' ? scaleFor(sport) : undefined;
   const whenDate = new Date(when);
-  const whenLabel = `${whenDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} · ${whenDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+  const whenLabel = Number.isNaN(whenDate.getTime())
+    ? ''
+    : `${whenDate.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' })}, ${whenDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
 
   return (
     <div className="page">
-      <PageHeader
-        eyebrow={user?.coach ? 'Тренеру' : 'Организатору'}
-        title={user?.coach ? 'Объявление о тренировке' : 'Новое событие'}
-      />
+      <PageHeader eyebrow={`Шаг ${step + 1} из ${STEPS.length}`} title={current.title}>
+        <div className="wizard-progress" aria-hidden>
+          {STEPS.map((s, i) => (
+            <span key={s.id} className={i <= step ? 'is-on' : ''} />
+          ))}
+        </div>
+      </PageHeader>
 
       {!user && (
         <div className="card callout">
-          Чтобы создать событие, нужно представиться.{' '}
+          Чтобы опубликовать событие, нужно представиться.{' '}
           <button type="button" className="link" onClick={() => setLoginOpen(true)}>
             Войти
           </button>
@@ -214,140 +248,145 @@ export function CreateEventPage() {
       )}
 
       <form className="form create-form" onSubmit={submit}>
-        <div className="widget-row">
-          <div className={`widget widget-sport${openSection === 'sport' ? ' is-open' : ''}`} onClick={() => setOpenSection('sport')}>
-            <SportIcon sport={sport} size={40} color={meta.color} />
-            <div className="widget-body">
-              <div className="widget-label">Вид спорта</div>
-              <div className="widget-value">{meta.label}</div>
-            </div>
-            <CaretDown size={20} weight="bold" className="widget-chevron" />
-          </div>
-
-          <div className={`widget widget-when${openSection === 'when' ? ' is-open' : ''}`} onClick={() => setOpenSection('when')}>
-            <Icon className="widget-icon" name="clock" size={40} color="#5ee7e3" />
-            <div className="widget-body">
-              <div className="widget-label">Когда</div>
-              <div className="widget-value">{whenLabel}</div>
-            </div>
-            <CaretDown size={20} weight="bold" className="widget-chevron" />
-          </div>
-
-          <div className={`widget widget-where${openSection === 'where' ? ' is-open' : ''}`} onClick={() => setOpenSection('where')}>
-            <Icon className="widget-icon" name="pin" size={40} color="#ff3b30" />
-            <div className="widget-body">
-              <div className="widget-label">Где</div>
-              <div className="widget-value">{venueName || addressText || 'Не указано'}</div>
-              <div className="widget-sub">
-                {point ? 'Точка на карте отмечена' : addressPoint ? 'Место найдено по адресу' : 'Адрес или точка на карте'}
-              </div>
-            </div>
-            <CaretDown size={20} weight="bold" className="widget-chevron" />
-          </div>
-        </div>
-
-        {openSection === 'sport' && (
+        {current.id === 'sport' && (
           <>
-            <div className="sport-picker">
-            <div className="section-title">Выберите вид спорта</div>
-            <div className="chips-wrap">
+            <p className="hint">{user?.coach ? 'По какому виду спорта тренировка?' : 'Выберите, во что играем или чем занимаемся.'}</p>
+            <div className="sport-grid">
               {SPORTS.map((s) => (
                 <button
                   type="button"
                   key={s.id}
-                  className={`chip${sport === s.id ? ' is-on' : ''}`}
-                  onClick={() => {
-                    setSport(s.id);
-                    setDivision(null);
-                    setLevel('any');
-                  }}
+                  className={`sport-tile${sport === s.id ? ' is-on' : ''}`}
+                  style={{ ['--sport' as string]: s.color }}
+                  onClick={() => chooseSport(s.id)}
                 >
-                  <SportIcon sport={s.id} size={20} color={sport === s.id ? undefined : s.color} />
-                  {s.label}
+                  <span className="sport-tile-icon">
+                    <SportIcon sport={s.id} size={28} color={s.color} />
+                  </span>
+                  <span className="sport-tile-label">{s.label}</span>
                 </button>
               ))}
             </div>
-          </div>
-          <label className="field">
-            <span className="label">Название события</span>
-            <input className="input" maxLength={120} placeholder="Например: Футбол 5×5 после работы" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </label>
-          <div className="field">
-            <div className="label label-row">
-              {divisionScale ? `Уровень · ${divisionScale.title}` : 'Уровень'}
-              <button
-                type="button"
-                className="label-info"
-                aria-label={`Что значат уровни: ${meta.label}`}
-                onClick={() => setLevelsOpen(true)}
-              >
-                <Info size={14} weight="fill" />
-              </button>
-            </div>
-            <div className="chips-wrap">
-              <button
-                type="button"
-                className={`chip${level === 'any' && !division ? ' is-on' : ''}`}
-                onClick={() => {
-                  setLevel('any');
-                  setDivision(null);
-                }}
-              >
-                Любой
-              </button>
-              {divisionScale
-                ? divisionScale.divisions.map((d) => (
-                    <button
-                      type="button"
-                      key={d.tag}
-                      title={d.label}
-                      className={`chip${division === d.tag ? ' is-on' : ''}`}
-                      onClick={() => {
-                        setDivision(d.tag);
-                        setLevel(d.level);
-                      }}
-                    >
-                      {d.tag}
-                    </button>
-                  ))
-                : LEVELS.filter((l) => l.id !== 'any').map((l) => (
-                    <button type="button" key={l.id} className={`chip${level === l.id ? ' is-on' : ''}`} onClick={() => setLevel(l.id)}>
-                      {l.label}
-                    </button>
-                  ))}
-            </div>
-            {divisionScale && (
-              <span className="hint">
-                {division
-                  ? divisionScale.divisions.find((d) => d.tag === division)?.label
-                  : 'Д1 — сильнейший, Д5 — новички'}
-              </span>
-            )}
-          </div>
-        </>
+          </>
         )}
 
-        {openSection === 'when' && (
-          <div className="expandable-body">
-            <div className="field">
-              <span className="label">Дата и время</span>
-              <input className="input" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+        {current.id === 'about' && (
+          <>
+            <div className="wizard-sport">
+              <SportIcon sport={sport} size={22} color={meta.color} />
+              {meta.label}
+              <button type="button" className="link" onClick={() => go(0)}>
+                Изменить
+              </button>
             </div>
+            <label className="field">
+              <span className="label">Название события</span>
+              <input
+                className="input"
+                maxLength={120}
+                autoFocus
+                placeholder={`Например: ${meta.label} после работы`}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </label>
             <div className="field">
-              <span className="label">Длительность</span>
-              <select className="input" value={durationMin} onChange={(e) => setDuration(Number(e.target.value))}>
-                {[30, 45, 60, 90, 120, 150, 180].map((m) => (
-                  <option key={m} value={m}>
-                    {m < 60 ? `${m} мин` : `${m / 60} ч`.replace('.5', ',5')}
-                  </option>
+              <div className="label">Тип события</div>
+              <div className="chips-wrap">
+                {EVENT_TYPES.map((t) => (
+                  <button
+                    type="button"
+                    key={t.id}
+                    className={`chip${eventType === t.id ? ' is-on' : ''}`}
+                    onClick={() => setEventType(t.id)}
+                  >
+                    {t.label}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
-          </div>
+            <div className="field">
+              <div className="label label-row">
+                {divisionScale ? `Уровень · ${divisionScale.title}` : 'Уровень'}
+                <button
+                  type="button"
+                  className="label-info"
+                  aria-label={`Что значат уровни: ${meta.label}`}
+                  onClick={() => setLevelsOpen(true)}
+                >
+                  <Info size={14} weight="fill" />
+                </button>
+              </div>
+              <div className="chips-wrap">
+                <button
+                  type="button"
+                  className={`chip${level === 'any' && !division ? ' is-on' : ''}`}
+                  onClick={() => {
+                    setLevel('any');
+                    setDivision(null);
+                  }}
+                >
+                  Любой
+                </button>
+                {divisionScale
+                  ? divisionScale.divisions.map((d) => (
+                      <button
+                        type="button"
+                        key={d.tag}
+                        title={d.label}
+                        className={`chip${division === d.tag ? ' is-on' : ''}`}
+                        onClick={() => {
+                          setDivision(d.tag);
+                          setLevel(d.level);
+                        }}
+                      >
+                        {d.tag}
+                      </button>
+                    ))
+                  : LEVELS.filter((l) => l.id !== 'any').map((l) => (
+                      <button type="button" key={l.id} className={`chip${level === l.id ? ' is-on' : ''}`} onClick={() => setLevel(l.id)}>
+                        {l.label}
+                      </button>
+                    ))}
+              </div>
+              {divisionScale && (
+                <span className="hint">
+                  {division
+                    ? divisionScale.divisions.find((d) => d.tag === division)?.label
+                    : 'Д1 — сильнейший, Д5 — новички'}
+                </span>
+              )}
+            </div>
+          </>
         )}
 
-        {openSection === 'where' && (
-          <div className="expandable-body">
+        {current.id === 'when' && (
+          <>
+            <div className="field">
+              <span className="label">Дата и время начала</span>
+              <input className="input" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+              {whenLabel && <span className="hint">{whenLabel}</span>}
+            </div>
+            <div className="field">
+              <span className="label">Сколько длится</span>
+              <div className="chips-wrap">
+                {DURATIONS.map((m) => (
+                  <button
+                    type="button"
+                    key={m}
+                    className={`chip${durationMin === m ? ' is-on' : ''}`}
+                    onClick={() => setDuration(m)}
+                  >
+                    {durationLabel(m)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {current.id === 'where' && (
+          <>
             <p className="hint">Укажите адрес, отметьте точку на карте или и то и другое.</p>
             <label className="field">
               <span className="label">Адрес</span>
@@ -399,84 +438,102 @@ export function CreateEventPage() {
               <span className="label">Название места (необязательно)</span>
               <input className="input" placeholder="Парк, стадион, спорткомплекс" value={venueName} onChange={(e) => setVenueName(e.target.value)} />
             </label>
-          </div>
+          </>
         )}
 
-        <ExpandableSection
-          title="Ещё параметры (тип, цена, описание)"
-          open={openSection === 'more'}
-          onToggle={() => setOpenSection('more')}
-        >
-          <div className="field">
-            <div className="label">Тип события</div>
-            <div className="chips-wrap">
-              {EVENT_TYPES.map((t) => (
-                <button
-                  type="button"
-                  key={t.id}
-                  className={`chip${eventType === t.id ? ' is-on' : ''}`}
-                  onClick={() => setEventType(t.id)}
-                >
-                  {t.label}
-                </button>
-              ))}
+        {current.id === 'details' && (
+          <>
+            <div className="grid-2">
+              <label className="field">
+                <span className="label">Участников</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={2}
+                  max={500}
+                  value={capacity}
+                  onChange={(e) => setCapacity(Math.max(1, Number(e.target.value) || 1))}
+                />
+              </label>
+              <label className="field">
+                <span className="label">Цена, BYN</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={price}
+                  onChange={(e) => setPrice(Math.max(0, Number(e.target.value) || 0))}
+                />
+                <span className="hint">0 — бесплатно</span>
+              </label>
             </div>
-          </div>
 
-          <div className="grid-2">
             <label className="field">
-              <span className="label">Участников</span>
-              <input className="input" type="number" min={2} max={500} value={capacity} onChange={(e) => setCapacity(Math.max(1, Number(e.target.value) || 1))} />
+              <span className="label">Описание (необязательно)</span>
+              <textarea
+                className="input"
+                rows={4}
+                placeholder="Что взять с собой, где встречаемся, какой темп…"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
             </label>
-            <label className="field">
-              <span className="label">Цена, BYN</span>
-              <input className="input" type="number" min={0} step={1} value={price} onChange={(e) => setPrice(Math.max(0, Number(e.target.value) || 0))} />
-            </label>
-          </div>
 
-          <label className="field">
-            <span className="label">Описание</span>
-            <textarea
-              className="input"
-              rows={3}
-              placeholder="Что взять с собой, где встречаемся, какой темп…"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </label>
-        </ExpandableSection>
+            <div className="card wizard-summary">
+              <div className="section-title">Проверьте</div>
+              <SummaryRow label="Вид спорта" value={meta.label} onEdit={() => go(0)} />
+              <SummaryRow label="Название" value={withDivisionTag(title.trim(), sport, division)} onEdit={() => go(1)} />
+              <SummaryRow label="Когда" value={`${whenLabel} · ${durationLabel(durationMin)}`} onEdit={() => go(2)} />
+              <SummaryRow label="Где" value={venueName.trim() || addressText || 'Точка на карте'} onEdit={() => go(3)} />
+            </div>
 
-        {user && (
-          <div className="card organizer-card">
-            <div className="organizer-body">
-              <div className="widget-label">Организатор</div>
-              <div className="organizer-name">{user.name}</div>
-              {user.username ? (
-                <div className="organizer-handle">@{user.username} — участники смогут написать вам в Telegram</div>
-              ) : (
-                <div className="organizer-handle muted">
-                  Нет username в Telegram — участникам будет не написать. Войдите через Telegram или укажите контакт в описании.
+            {user && (
+              <div className="card organizer-card">
+                <div className="organizer-body">
+                  <div className="widget-label">Организатор</div>
+                  <div className="organizer-name">{user.name}</div>
+                  {user.username ? (
+                    <div className="organizer-handle">@{user.username} — участники смогут написать вам в Telegram</div>
+                  ) : (
+                    <div className="organizer-handle muted">
+                      Нет username в Telegram — участникам будет не написать. Войдите через Telegram или укажите контакт в описании.
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+            )}
+          </>
+        )}
+
+        {current.id !== 'sport' && (
+          <>
+            {currentError && (title || current.id !== 'about') && <div className="error-banner">{currentError}</div>}
+            <div className="wizard-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => go(step - 1)}>
+                Назад
+              </button>
+              <button className="btn btn-primary btn-arrow btn-grow" disabled={busy || !!currentError}>
+                {last ? (busy ? 'Публикуем…' : 'Опубликовать') : 'Далее'}
+              </button>
             </div>
-          </div>
+          </>
         )}
-
-        {errors.length > 0 && (
-          <div className="error-banner">
-            {errors.map((e) => `Укажите ${e}`).join(', ')}
-          </div>
-        )}
-
-        <button className="btn btn-primary btn-arrow btn-block" disabled={busy || searching || errors.length > 0 || !place}>
-          {busy ? 'Публикуем…' : searching ? 'Ищем адрес…' : 'Опубликовать'}
-        </button>
       </form>
 
-      <LevelsInfoSheet open={levelsOpen} onClose={() => setLevelsOpen(false)} initialSport={sport} />
+      <LevelsInfoSheet open={levelsOpen} onClose={() => setLevelsOpen(false)} initialSport={sport} lockSport />
 
       <LoginSheet open={loginOpen} onClose={() => setLoginOpen(false)} reason="Войдите, чтобы создать событие" />
     </div>
+  );
+}
+
+function SummaryRow({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
+  return (
+    <button type="button" className="summary-row" onClick={onEdit}>
+      <span className="summary-label">{label}</span>
+      <span className="summary-value">{value}</span>
+    </button>
   );
 }
 

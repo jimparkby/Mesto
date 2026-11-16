@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CaretDown, Info, Share } from '@phosphor-icons/react';
+import { createPortal } from 'react-dom';
+import { ArrowsOut, CaretDown, Info, Share } from '@phosphor-icons/react';
 import { api, type Participant } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
@@ -57,6 +58,17 @@ export function EventPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [levelsOpen, setLevelsOpen] = useState(false);
   const [deciding, setDeciding] = useState<string | null>(null);
+  const [mapFull, setMapFull] = useState(false);
+
+  // Карта на весь экран: страница под ней не прокручивается.
+  useEffect(() => {
+    if (!mapFull) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mapFull]);
 
   const load = useCallback(async () => {
     const [e, p] = await Promise.all([api.getEvent(id), api.participants(id)]);
@@ -279,6 +291,9 @@ export function EventPage() {
 
       <div className="card map-card">
         <MapView events={[event]} center={{ lat: event.lat, lng: event.lng }} zoom={14} className="map-event" />
+        <button className="map-expand-btn" onClick={() => setMapFull(true)} aria-label="Открыть карту на весь экран">
+          <ArrowsOut size={20} weight="bold" />
+        </button>
         <button className="route-btn" onClick={route}>
           <Icon name="route" size={20} />
           Построить маршрут
@@ -391,7 +406,30 @@ export function EventPage() {
         </button>
       </div>
 
-      <LevelsInfoSheet open={levelsOpen} onClose={() => setLevelsOpen(false)} initialSport={event.sport} />
+      <LevelsInfoSheet open={levelsOpen} onClose={() => setLevelsOpen(false)} initialSport={event.sport} lockSport />
+
+      {mapFull &&
+        createPortal(
+          <div className="map-full" role="dialog" aria-label="Карта события">
+            <MapView events={[event]} center={{ lat: event.lat, lng: event.lng }} zoom={15} className="map-full-map" />
+            <div className="map-full-top">
+              <div className="map-full-hint">
+                {event.venueName}
+                {event.address && event.address !== event.venueName ? ` · ${event.address}` : ''}
+              </div>
+            </div>
+            <div className="map-full-bottom map-full-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => setMapFull(false)}>
+                Закрыть
+              </button>
+              <button type="button" className="btn btn-primary btn-grow" onClick={route}>
+                <Icon name="route" size={20} />
+                Построить маршрут
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       <LoginSheet
         open={loginOpen}

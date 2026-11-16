@@ -244,7 +244,8 @@ export function MapView({ events = [], selectedId, onSelect, userLocation, pick,
 
   useEffect(() => {
     const m = mapRef.current;
-    if (ready && m && center) m.map.flyTo({ center: [center.lng, center.lat], zoom: 13 });
+    if (ready && m && center) m.map.flyTo({ center: [center.lng, center.lat], zoom: Math.max(zoom, 13) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, center]);
 
   return (
