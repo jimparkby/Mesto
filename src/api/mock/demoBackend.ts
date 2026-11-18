@@ -4,6 +4,7 @@ import { EMPTY_RATINGS } from '../../domain/people';
 import type {
   AppNotification,
   AppUser,
+  CoachSlot,
   Community,
   EventComment,
   NotificationKind,
@@ -58,6 +59,8 @@ interface State {
   members: { communityId: string; userId: string }[];
   notifications: StoredNotification[];
   views: { profileId: string; viewerId: string; day: string }[];
+  /** Расписание тренеров (шаблоны); у старых сохранений поля нет. */
+  slots?: CoachSlot[];
 }
 
 function today(): string {
@@ -102,6 +105,7 @@ function load(): State {
     // Раз в день пересобираем демо-события, чтобы они не уходили в прошлое.
     const own = state.events.filter((e) => !e.id.startsWith('seed-'));
     state = { ...state, seedDay: today(), events: [...generateSeedEvents(), ...own] };
+    materializeAll(state);
     save(state);
   }
   return state;
@@ -118,6 +122,90 @@ function save(state: State) {
 function withCounts(state: State, e: SportEvent): SportEvent {
   const local = state.registrations.filter((r) => r.eventId === e.id && (r.status ?? 'approved') === 'approved').length;
   return { ...e, registeredCount: e.registeredCount + local };
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+const localDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+/** Есть ли на занятии клиенты (кроме самого тренера). */
+function hasClients(s: State, e: SportEvent): boolean {
+  return s.registrations.some((r) => r.eventId === e.id && r.userId !== e.organizerId && r.status !== 'rejected');
+}
+
+/** То же, что materialize_slot на сервере: занятия по шаблону на 4 недели вперёд. */
+function materializeSlot(s: State, slot: CoachSlot, organizer: { name: string; username?: string | null; photoUrl?: string | null }) {
+  const now = Date.now();
+  const fits = (e: SportEvent) => {
+    const d = new Date(e.startsAt);
+    const wd = ((d.getDay() + 6) % 7) + 1;
+    const day = localDate(d);
+    return (
+      slot.active &&
+      slot.weekdays.includes(wd as CoachSlot['weekdays'][number]) &&
+      `${pad2(d.getHours())}:${pad2(d.getMinutes())}` === slot.startTime &&
+      day >= slot.validFrom &&
+      (!slot.validUntil || day <= slot.validUntil)
+    );
+  };
+  const free = (e: SportEvent) => e.slotId === slot.id && new Date(e.startsAt).getTime() > now && e.status === 'published' && !hasClients(s, e);
+  const removed = new Set(s.events.filter((e) => free(e) && !fits(e)).map((e) => e.id));
+  s.events = s.events.filter((e) => !removed.has(e.id));
+  s.registrations = s.registrations.filter((r) => !removed.has(r.eventId));
+  if (!slot.active) return;
+  const fields = {
+    title: slot.title,
+    sport: slot.sport,
+    description: slot.description,
+    durationMin: slot.durationMin,
+    venueName: slot.venueName || slot.address || 'Точка на карте',
+    address: slot.address,
+    city: slot.city,
+    lat: slot.lat,
+    lng: slot.lng,
+    level: slot.levels[0] ?? 'any',
+    levels: slot.levels,
+    price: slot.price,
+    capacity: slot.spots + 1,
+    reserved: 0,
+    autoApprove: slot.autoApprove,
+  } as const;
+  for (const e of s.events) if (free(e)) Object.assign(e, fields);
+  const [h, m] = slot.startTime.split(':').map(Number);
+  const base = new Date();
+  for (let i = 0; i < 28; i++) {
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i, h, m);
+    const wd = (((d.getDay() + 6) % 7) + 1) as CoachSlot['weekdays'][number];
+    const day = localDate(d);
+    if (!slot.weekdays.includes(wd) || d.getTime() <= now || day < slot.validFrom || (slot.validUntil && day > slot.validUntil)) continue;
+    const startsAt = d.toISOString();
+    if (s.events.some((e) => e.slotId === slot.id && e.startsAt === startsAt)) continue;
+    const id = uid('ev');
+    s.events.push({
+      ...fields,
+      id,
+      eventType: 'training',
+      startsAt,
+      registeredCount: 0,
+      organizerId: slot.coachId,
+      organizerName: organizer.name,
+      organizerUsername: organizer.username ?? null,
+      organizerPhotoUrl: organizer.photoUrl ?? null,
+      organizerIsCoach: true,
+      organizerRating: null,
+      status: 'published',
+      createdAt: new Date().toISOString(),
+      slotId: slot.id,
+    });
+    s.registrations.push({ eventId: id, userId: slot.coachId, name: organizer.name, photoUrl: organizer.photoUrl, status: 'approved' });
+  }
+}
+
+/** Ночная догенерация, как pg_cron на сервере: раз в день продлеваем все шаблоны. */
+function materializeAll(s: State) {
+  for (const slot of s.slots ?? []) {
+    const any = s.events.find((e) => e.organizerId === slot.coachId);
+    materializeSlot(s, slot, { name: any?.organizerName ?? 'Тренер', username: any?.organizerUsername, photoUrl: any?.organizerPhotoUrl });
+  }
 }
 
 function uid(prefix: string): string {
@@ -215,6 +303,8 @@ export function createDemoBackend(): Backend {
     return {
       ...emptyUser({ id, name, provider: 'guest' }),
       photoUrl: reg?.photoUrl ?? null,
+      // Локальный тренер с расписанием (в демо другой пользователь на том же устройстве).
+      isCoach: (s.slots ?? []).some((x) => x.coachId === id),
       onboarded: false,
     };
   }
@@ -411,9 +501,11 @@ export function createDemoBackend(): Backend {
       if (ev.registeredCount + ev.reserved >= ev.capacity) throw new Error('Мест больше нет');
       // Демо-события некому одобрять — запись сразу принята; на чужие локальные — заявка.
       const demoOrganizer = e.organizerId.startsWith('org-') || e.organizerId.startsWith('person-');
-      const status: RegStatus = e.organizerId === user.id || demoOrganizer ? 'approved' : 'pending';
+      const status: RegStatus = e.organizerId === user.id || demoOrganizer || e.autoApprove ? 'approved' : 'pending';
       s.registrations.push({ eventId, userId: user.id, name: user.name, photoUrl: user.photoUrl, status });
       if (status === 'pending') notify(s, e.organizerId, 'request_new', 'Новая заявка', `${user.name} хочет на «${e.title}».`, `/event/${e.id}`);
+      else if (e.autoApprove && e.organizerId !== user.id)
+        notify(s, e.organizerId, 'booking_new', 'Новая запись', `${user.name} записался на «${e.title}».`, `/event/${e.id}`);
       save(s);
       return status;
     },
@@ -613,6 +705,43 @@ export function createDemoBackend(): Backend {
         prevIncome: income(tp, t0),
         totalIncome: income(0, now),
       };
+    },
+
+    async listCoachSlots(coachId) {
+      return (load().slots ?? []).filter((x) => x.coachId === coachId).sort((a, b) => a.startTime.localeCompare(b.startTime));
+    },
+
+    async saveCoachSlot(input, user, id) {
+      const s = load();
+      const slots = s.slots ?? (s.slots = []);
+      let slot = id ? slots.find((x) => x.id === id && x.coachId === user.id) : undefined;
+      if (id && !slot) throw new Error('Слот не найден');
+      if (slot) Object.assign(slot, input);
+      else {
+        slot = { ...input, id: uid('slot'), coachId: user.id, validFrom: localDate(new Date()) };
+        slots.push(slot);
+      }
+      materializeSlot(s, slot, user);
+      save(s);
+      return { ...slot };
+    },
+
+    async deleteCoachSlot(id, user) {
+      const s = load();
+      const slot = (s.slots ?? []).find((x) => x.id === id && x.coachId === user.id);
+      if (!slot) return;
+      materializeSlot(s, { ...slot, active: false }, user);
+      s.slots = (s.slots ?? []).filter((x) => x.id !== id);
+      for (const e of s.events) if (e.slotId === id) e.slotId = null;
+      save(s);
+    },
+
+    async coachSessions(coachId, fromIso, toIso) {
+      const s = load();
+      return s.events
+        .filter((e) => e.organizerId === coachId && e.startsAt >= fromIso && e.startsAt < toIso)
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+        .map((e) => withCounts(s, e));
     },
   };
   return api;

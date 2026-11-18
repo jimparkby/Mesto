@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { CoachSchedule } from '../components/CoachSchedule';
 import { Icon } from '../components/Icon';
 import { ProfileView } from '../components/ProfileView';
 import { telegramLink } from '../domain/people';
@@ -34,7 +35,8 @@ export function UserPage() {
     if (user && id && user.id !== id) api.trackProfileView(id).catch(() => {});
   }, [user, id]);
 
-  const own = useMemo(() => events.filter((e) => e.organizerId === id), [events, id]);
+  // Занятия из расписания показываем в онлайн-записи, в карусели — только разовые.
+  const own = useMemo(() => events.filter((e) => e.organizerId === id && !e.slotId), [events, id]);
 
   if (profile === undefined)
     return (
@@ -67,7 +69,11 @@ export function UserPage() {
   return (
     <div className="page user-page">
       <h1 className="page-title">Профиль</h1>
-      <ProfileView profile={profile} events={own} />
+      <ProfileView
+        profile={profile}
+        events={own}
+        afterSports={profile.isCoach ? <CoachSchedule coachId={profile.id} coachName={profile.name} /> : null}
+      />
 
       {user?.id !== profile.id && (
         <div className="action-bar">

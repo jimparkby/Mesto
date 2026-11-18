@@ -16,7 +16,9 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { PassportPage } from './pages/PassportPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RatePage } from './pages/RatePage';
+import { SchedulePage } from './pages/SchedulePage';
 import { SearchPage } from './pages/SearchPage';
+import { SlotEditPage } from './pages/SlotEditPage';
 import { StatsPage } from './pages/StatsPage';
 import { UserPage } from './pages/UserPage';
 import { platform } from './platforms';
@@ -115,6 +117,8 @@ export function App() {
                     <Route path="rate/:id" element={<RatePage />} />
                     <Route path="notifications" element={<NotificationsPage />} />
                     <Route path="stats" element={<StatsPage />} />
+                    <Route path="schedule" element={<SchedulePage />} />
+                    <Route path="schedule/slot/:id" element={<SlotEditPage />} />
                     <Route path="admin" element={<AdminPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Route>

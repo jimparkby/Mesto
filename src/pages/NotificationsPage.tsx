@@ -1,4 +1,4 @@
-import { Bell, CalendarX, ChatText, CheckCircle, Star, UserPlus, XCircle, HandWaving } from '@phosphor-icons/react';
+import { Bell, CalendarCheck, CalendarMinus, CalendarX, ChatText, CheckCircle, Star, UserPlus, XCircle, HandWaving } from '@phosphor-icons/react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -12,6 +12,8 @@ const ICONS: Record<NotificationKind, { Glyph: typeof Bell; color: string }> = {
   comment: { Glyph: ChatText, color: '#5856d6' },
   rate_reminder: { Glyph: Star, color: '#ff9500' },
   event_cancelled: { Glyph: CalendarX, color: '#8e8e93' },
+  booking_new: { Glyph: CalendarCheck, color: '#34c759' },
+  booking_cancelled: { Glyph: CalendarMinus, color: '#ff9500' },
 };
 
 function ago(iso: string): string {

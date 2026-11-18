@@ -1,6 +1,8 @@
 import type {
   AppNotification,
   AppUser,
+  CoachSlot,
+  CoachSlotInput,
   CoachStats,
   Community,
   EventComment,
@@ -109,4 +111,13 @@ export interface Backend {
 
   // --- тренер ---
   coachStats(user: AppUser, days: number, sport: string | null): Promise<CoachStats>;
+
+  // --- расписание тренера ---
+  /** Недельный шаблон тренера. */
+  listCoachSlots(coachId: string): Promise<CoachSlot[]>;
+  /** Создать (без id) или изменить слот; сервер сам перевыставит будущие занятия без записей. */
+  saveCoachSlot(input: CoachSlotInput, user: AppUser, id?: string): Promise<CoachSlot>;
+  deleteCoachSlot(id: string, user: AppUser): Promise<void>;
+  /** Занятия тренера в диапазоне дат (владельцу — и отменённые). */
+  coachSessions(coachId: string, fromIso: string, toIso: string): Promise<SportEvent[]>;
 }

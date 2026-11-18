@@ -61,6 +61,10 @@ export interface SportEvent {
   createdAt: string;
   /** Ссылка на исходный анонс, если событие импортировано из Telegram/Instagram/сайта. */
   sourceUrl?: string | null;
+  /** Занятие выставлено из расписания тренера (слот шаблона). */
+  slotId?: string | null;
+  /** Моментальная запись: заявка принимается без подтверждения. */
+  autoApprove?: boolean;
 }
 
 export type NewEventInput = Pick<
@@ -186,7 +190,9 @@ export type NotificationKind =
   | 'request_rejected'
   | 'comment'
   | 'rate_reminder'
-  | 'event_cancelled';
+  | 'event_cancelled'
+  | 'booking_new'
+  | 'booking_cancelled';
 
 export interface AppNotification {
   id: string;
@@ -221,3 +227,36 @@ export interface CoachStats {
   prevIncome: number;
   totalIncome: number;
 }
+
+/** День недели ISO: 1 — понедельник … 7 — воскресенье. */
+export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/** Слот расписания тренера: повторяется каждую неделю, занятия по нему выставляются автоматически. */
+export interface CoachSlot {
+  id: string;
+  coachId: string;
+  weekdays: Weekday[];
+  /** HH:MM, время Минска. */
+  startTime: string;
+  durationMin: number;
+  sport: SportId;
+  title: string;
+  description: string;
+  venueName: string;
+  address: string;
+  city: string;
+  lat: number;
+  lng: number;
+  levels: Level[];
+  price: number;
+  /** Мест для клиентов (сам тренер не считается). */
+  spots: number;
+  /** Моментальная запись без подтверждения тренера. */
+  autoApprove: boolean;
+  active: boolean;
+  /** YYYY-MM-DD */
+  validFrom: string;
+  validUntil: string | null;
+}
+
+export type CoachSlotInput = Omit<CoachSlot, 'id' | 'coachId' | 'validFrom'>;

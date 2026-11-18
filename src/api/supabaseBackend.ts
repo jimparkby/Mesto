@@ -5,6 +5,8 @@ import { EMPTY_RATINGS, overallRating } from '../domain/people';
 import type {
   AppNotification,
   AppUser,
+  CoachSlot,
+  CoachSlotInput,
   CoachStats,
   Community,
   EventComment,
@@ -58,6 +60,8 @@ interface EventRow {
   status: SportEvent['status'];
   created_at: string;
   source_url: string | null;
+  slot_id?: string | null;
+  auto_approve?: boolean;
   organizer?: OrganizerEmbed | null;
 }
 
@@ -142,6 +146,8 @@ function toEvent(r: EventRow): SportEvent {
     status: r.status,
     createdAt: r.created_at,
     sourceUrl: r.source_url,
+    slotId: r.slot_id ?? null,
+    autoApprove: r.auto_approve ?? false,
   };
 }
 
@@ -185,6 +191,76 @@ function toUser(p: ProfileRow): AppUser {
     telegramId: p.telegram_id,
     role: p.role,
     provider: p.telegram_id ? 'telegram' : 'guest',
+  };
+}
+
+interface SlotRow {
+  id: string;
+  coach_id: string;
+  weekdays: number[];
+  start_time: string;
+  duration_min: number;
+  sport: SportId;
+  title: string;
+  description: string;
+  venue_name: string;
+  address: string;
+  city: string;
+  lat: number;
+  lng: number;
+  levels: Level[];
+  price: number | string;
+  spots: number;
+  auto_approve: boolean;
+  active: boolean;
+  valid_from: string;
+  valid_until: string | null;
+}
+
+function toSlot(r: SlotRow): CoachSlot {
+  return {
+    id: r.id,
+    coachId: r.coach_id,
+    weekdays: [...r.weekdays].sort() as CoachSlot['weekdays'],
+    startTime: r.start_time.slice(0, 5),
+    durationMin: r.duration_min,
+    sport: r.sport,
+    title: r.title,
+    description: r.description,
+    venueName: r.venue_name,
+    address: r.address,
+    city: r.city,
+    lat: r.lat,
+    lng: r.lng,
+    levels: r.levels ?? [],
+    price: Number(r.price),
+    spots: r.spots,
+    autoApprove: r.auto_approve,
+    active: r.active,
+    validFrom: r.valid_from,
+    validUntil: r.valid_until,
+  };
+}
+
+function fromSlot(s: CoachSlotInput) {
+  return {
+    weekdays: s.weekdays,
+    start_time: s.startTime,
+    duration_min: s.durationMin,
+    sport: s.sport,
+    title: s.title,
+    description: s.description,
+    venue_name: s.venueName,
+    address: s.address,
+    city: s.city,
+    lat: s.lat,
+    lng: s.lng,
+    levels: s.levels,
+    price: s.price,
+    spots: s.spots,
+    auto_approve: s.autoApprove,
+    active: s.active,
+    valid_until: s.validUntil,
   };
 }
 
@@ -681,6 +757,50 @@ export function createSupabaseBackend(url: string, anonKey: string): Backend {
         totalIncome: Number(s.totalIncome),
         days: s.days.map((d) => ({ ...d, income: Number(d.income) })),
       };
+    },
+
+    async listCoachSlots(coachId) {
+      const { data, error } = await sb
+        .from('coach_slots')
+        .select('*')
+        .eq('coach_id', coachId)
+        .order('start_time')
+        .returns<SlotRow[]>();
+      // До миграции таблицы нет — расписания просто нет.
+      if (error) return [];
+      return (data ?? []).map(toSlot);
+    },
+
+    async saveCoachSlot(input, user, id) {
+      const values = fromSlot(input);
+      const res = id
+        ? await sb.from('coach_slots').update(values).eq('id', id).eq('coach_id', user.id).select('*').single<SlotRow>()
+        : await sb.from('coach_slots').insert({ ...values, coach_id: user.id }).select('*').single<SlotRow>();
+      if (res.error) {
+        if (res.error.code === '42P01' || /coach_slots/.test(res.error.message))
+          throw new Error('Расписание ещё не включено на сервере. Попробуйте позже.');
+        throw new Error(friendlyError(res.error));
+      }
+      return toSlot(res.data);
+    },
+
+    async deleteCoachSlot(id, user) {
+      const { error } = await sb.from('coach_slots').delete().eq('id', id).eq('coach_id', user.id);
+      if (error) throw new Error(friendlyError(error));
+    },
+
+    async coachSessions(coachId, fromIso, toIso) {
+      return selectEvents((columns) =>
+        sb
+          .from('events')
+          .select(columns)
+          .eq('organizer_id', coachId)
+          .gte('starts_at', fromIso)
+          .lt('starts_at', toIso)
+          .order('starts_at')
+          .limit(500)
+          .returns<EventRow[]>(),
+      );
     },
   };
   return api;

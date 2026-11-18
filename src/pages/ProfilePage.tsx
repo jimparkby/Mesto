@@ -1,4 +1,4 @@
-import { ChartLineUp, Desktop, MoonStars, PencilSimple, Sun, TelegramLogo } from '@phosphor-icons/react';
+import { CalendarDots, ChartLineUp, Desktop, MoonStars, PencilSimple, Sun, TelegramLogo } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
@@ -97,6 +97,19 @@ export function ProfilePage() {
       )}
 
       <ProfileView profile={user} events={own} />
+
+      {isCoach && (
+        <Link to="/schedule" className="card schedule-entry">
+          <span className="schedule-entry-icon">
+            <CalendarDots size={24} weight="fill" />
+          </span>
+          <span className="grow">
+            <b>Расписание и онлайн-запись</b>
+            <span className="muted">Шаблон недели, свободные места, записи клиентов</span>
+          </span>
+          <Icon name="chevron" size={18} weight="bold" className="muted" />
+        </Link>
+      )}
 
       {isCoach && (
         <section className="card coach-stats-mini">

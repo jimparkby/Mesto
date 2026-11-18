@@ -24,12 +24,15 @@ export function ProfileView({
   profile: p,
   events = [],
   headerExtra,
+  afterSports,
   children,
 }: {
   profile: PublicProfile;
   /** Ближайшие события человека (для тренера — его занятия). */
   events?: SportEvent[];
   headerExtra?: ReactNode;
+  /** Блок сразу после видов спорта — у тренера онлайн-запись. */
+  afterSports?: ReactNode;
   children?: ReactNode;
 }) {
   const [viewer, setViewer] = useState<string | null>(null);
@@ -125,6 +128,8 @@ export function ProfileView({
           })}
         </div>
       )}
+
+      {afterSports}
 
       {p.isCoach && upcoming.length > 0 && (
         <>
